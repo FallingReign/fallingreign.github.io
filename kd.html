@@ -1,0 +1,1798 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Kingdomino">
+<meta name="theme-color" content="#6b4630">
+<title>Kingdomino Scorer</title>
+<style>
+:root {
+  --ink: #241f1c;
+  --paper: #f7f6f2;
+  --paper-grey: #d3d2ce;
+  --line: #2b2826;
+  --gold: #eab74a;
+  --accent: #6b4630;
+  --accent-dark: #3f2818;
+  --row: clamp(34px, 5.3vh, 50px);
+  font-family: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--ink);
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background:
+    repeating-linear-gradient(91deg, rgba(110, 70, 35, .07) 0 2px, transparent 2px 13px),
+    linear-gradient(180deg, #e4cba5, #d2b186);
+  -webkit-tap-highlight-color: transparent;
+}
+button, input, label { font: inherit; color: inherit; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Screens */
+.screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) 12px calc(env(safe-area-inset-bottom) + 14px);
+}
+.bar { display: flex; align-items: center; gap: 10px; min-height: 58px; }
+.bar h1 { flex: 1; margin: 0; font-size: 1.15rem; font-weight: 800; }
+.icon-btn { border: 0; background: rgba(255, 255, 255, .6); width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; }
+.icon-btn svg { width: 22px; height: 22px; }
+.actions { display: flex; gap: 10px; align-items: center; margin-top: auto; padding-top: 16px; }
+.btn {
+  appearance: none; border: 0; border-radius: 999px; min-height: 54px; padding: 0 22px;
+  font-size: 1.05rem; font-weight: 800; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px; user-select: none;
+}
+.btn svg { width: 24px; height: 24px; }
+.btn.primary { flex: 1; background: var(--accent); color: #fff; box-shadow: 0 4px 0 var(--accent-dark); }
+.btn.primary:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--accent-dark); }
+.btn.primary:disabled { opacity: .6; }
+.btn.secondary { background: rgba(255, 255, 255, .78); }
+.btn.quiet { background: transparent; color: var(--accent-dark); min-height: 44px; padding: 0 8px; font-weight: 700; }
+.note { text-align: center; margin: 10px 0 0; font-size: .92rem; min-height: 1.2em; }
+.note.small { font-size: .8rem; opacity: .7; }
+
+/* Terrain art, shared by the score sheet and the square picker */
+.art-wheat { background: repeating-linear-gradient(118deg, rgba(255, 245, 200, .14) 0 3px, transparent 3px 10px), linear-gradient(160deg, #e3b752, #c2902c); }
+.art-forest { background: radial-gradient(circle at 22% 32%, #5f9a4f 0 13%, transparent 14%), radial-gradient(circle at 48% 70%, #578f48 0 15%, transparent 16%), radial-gradient(circle at 72% 30%, #5f9a4f 0 12%, transparent 13%), linear-gradient(160deg, #36663a, #244a28); }
+.art-lake { background: repeating-radial-gradient(circle at 30% 45%, rgba(255, 255, 255, .14) 0 2px, transparent 2px 11px), linear-gradient(160deg, #54a2e6, #2d72bd); }
+.art-grass { background: radial-gradient(circle at 18% 72%, #fff 0 5%, transparent 6%), radial-gradient(circle at 34% 86%, #fff 0 4%, transparent 5%), linear-gradient(160deg, #b9d652, #8db235); }
+.art-swamp { background: repeating-linear-gradient(24deg, rgba(0, 0, 0, .14) 0 2px, transparent 2px 13px), linear-gradient(160deg, #756050, #4f3f31); }
+.art-mine { background: radial-gradient(circle at 28% 62%, #4d4259 0 14%, transparent 15%), radial-gradient(circle at 55% 38%, #3d3448 0 12%, transparent 13%), linear-gradient(160deg, #2a2524, #191615); }
+.art-castle { background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .12) 0 2px, transparent 2px 8px), linear-gradient(160deg, #9aa3b2, #6f7888); }
+.art-bare { background: repeating-linear-gradient(45deg, #cdb08a 0 6px, #bf9f77 6px 12px); }
+.art-wood { background: repeating-linear-gradient(90deg, rgba(0, 0, 0, .2) 0 1px, transparent 1px 7px), linear-gradient(180deg, #6e4731, #4a2d1f); }
+.art-stone { background: linear-gradient(160deg, #a1a2a6, #7c7d81); }
+
+/* Crown, drawn like the pad */
+.crown { display: block; width: 30px; height: auto; }
+
+/* Camera */
+.screen.camera { position: fixed; inset: 0; max-width: none; margin: 0; padding: 0; background: #000; color: #fff; z-index: 5; }
+.camera video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.camera .guide { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.camera .bar { position: relative; z-index: 1; padding: calc(env(safe-area-inset-top) + 6px) 12px 0; }
+.camera .bar .grow { flex: 1; }
+.camera .icon-btn { background: rgba(0, 0, 0, .5); color: #fff; }
+.camera .seg { background: rgba(0, 0, 0, .5); }
+.camera .seg button { color: #fff; }
+.camera-bottom { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: 0 20px calc(env(safe-area-inset-bottom) + 18px); }
+.camera-hint { margin: 0 0 14px; text-align: center; font-weight: 800; text-shadow: 0 1px 4px rgba(0, 0, 0, .8); }
+.camera-actions { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+.camera-actions .icon-btn.big { width: 52px; height: 52px; cursor: pointer; }
+.camera-actions .icon-btn.big svg { width: 26px; height: 26px; }
+.shutter { width: 78px; height: 78px; border-radius: 50%; border: 5px solid #fff; background: #fff; box-shadow: inset 0 0 0 4px #000; cursor: pointer; }
+.shutter:active { transform: scale(.94); }
+.shutter:disabled { opacity: .4; }
+.guide .dim { fill: rgba(0, 0, 0, .45); }
+.guide .lines { stroke: rgba(255, 255, 255, .8); stroke-width: 1.2; fill: none; }
+.guide .edge { stroke: #fff; stroke-width: 2.5; fill: none; }
+.guide .corner { stroke: #fff; stroke-width: 6; fill: none; stroke-linecap: round; }
+.busy { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(36, 31, 28, .6); color: #fff; font-size: 1.15rem; font-weight: 800; }
+
+/* Score sheet, laid out like the paper pad */
+.pad-wrap { overflow-x: auto; padding: 2px 2px 8px; }
+.pad {
+  display: grid;
+  grid-template-columns: minmax(62px, 1fr) repeat(4, minmax(0, 1.1fr));
+  background: var(--paper);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(60, 30, 10, .28);
+}
+.pad .cell {
+  appearance: none; border: 0; margin: 0; padding: 0;
+  min-height: var(--row);
+  display: flex; align-items: center; justify-content: center;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  font-size: 1.25rem; font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  position: relative;
+}
+.pad .cell.last { border-right: 0; }
+.pad .cell.grey { background: var(--paper-grey); }
+.pad .cell.paper { background: var(--paper); }
+.pad .corner { background: var(--paper); }
+.pad .icon { justify-content: flex-end; padding-right: 8px; }
+.pad .icon.bonus { justify-content: space-between; padding: 0 6px 0 8px; color: var(--gold); font-size: 1.4rem; font-weight: 900; cursor: pointer; }
+.pad .icon.bonus.off { filter: grayscale(1); opacity: .45; }
+.pad .icon.total { color: var(--gold); font-size: 2rem; font-weight: 900; }
+.pad .value { cursor: pointer; }
+.pad .value.zero { color: rgba(0, 0, 0, .28); }
+.pad .value.total { font-size: 1.5rem; font-weight: 900; }
+.pad .value.winner { background: linear-gradient(180deg, #f8d986, var(--gold)); }
+.pad .name input { width: 100%; min-width: 0; border: 0; background: transparent; text-align: center; font-size: 16px; font-weight: 800; padding: 8px 2px; text-overflow: ellipsis; }
+.pad .name .crown { position: absolute; top: -2px; right: 2px; width: 20px; }
+.rope { grid-column: 1 / -1; height: 5px; background: repeating-linear-gradient(115deg, #2b2826 0 2px, #9a928b 2px 4px); }
+.mini-grid { width: 24px; height: 24px; display: block; }
+.mini-grid rect { stroke: #b9b9b9; stroke-width: .6; }
+.mini-grid .open { fill: #fff; }
+.mini-grid .castle { fill: #1f1f1f; }
+.mini-grid .full { fill: #a9d1b0; }
+
+/* Line up the grid */
+.seg { display: inline-flex; background: rgba(255, 255, 255, .65); border-radius: 999px; padding: 3px; }
+.seg button { border: 0; background: transparent; border-radius: 999px; padding: 8px 12px; font-weight: 800; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.stage { position: relative; margin: 0 auto; border-radius: 10px; overflow: hidden; background: #000; touch-action: none; }
+.stage canvas.photo, .stage svg.overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
+.overlay .dim { fill: rgba(0, 0, 0, .42); }
+.overlay .grid { stroke: rgba(255, 255, 255, .85); stroke-width: 1.2; fill: none; vector-effect: non-scaling-stroke; }
+.overlay .edge { stroke: #fff; stroke-width: 2.5; fill: none; vector-effect: non-scaling-stroke; }
+.overlay .edge.bad { stroke: #ff5a4f; }
+.overlay .handle { fill: rgba(255, 255, 255, .22); stroke: #fff; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+.loupe { position: absolute; top: 8px; width: 132px; height: 132px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 4px 14px rgba(0, 0, 0, .55); pointer-events: none; background: #000; }
+.loupe.left { left: 8px; }
+.loupe.right { right: 8px; }
+
+/* Check the squares */
+.board {
+  width: min(100%, 64vh);
+  aspect-ratio: 1;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(var(--n), 1fr);
+  background-size: 100% 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .3);
+}
+.sq { position: relative; border: 0; padding: 0; background: transparent; cursor: pointer; box-shadow: inset 0 0 0 3px var(--ring); }
+.sq.bare { background: repeating-linear-gradient(45deg, rgba(0, 0, 0, .4) 0 4px, transparent 4px 9px); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .8); }
+.sq.picked { box-shadow: inset 0 0 0 3px var(--ring), inset 0 0 0 7px #fff; }
+.tag { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; gap: 1px; padding: 2px 4px; border-radius: 999px; background: rgba(20, 14, 10, .72); color: #fff; pointer-events: none; }
+.tag .crown { width: 12px; }
+.tag svg.castle-icon { width: 15px; height: 15px; display: block; }
+.live { text-align: center; margin: 12px 0 0; font-weight: 700; }
+.live strong { display: block; font-size: 2.3rem; line-height: 1.1; font-weight: 900; }
+
+/* Square picker */
+.picker { position: fixed; inset: 0; z-index: 10; background: rgba(0, 0, 0, .35); display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: 100%; max-width: 560px; background: #fbf8f2; border-radius: 18px 18px 0 0; padding: 14px 14px calc(env(safe-area-inset-bottom) + 14px); box-shadow: 0 -6px 24px rgba(0, 0, 0, .25); }
+.choices, .crown-choices { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.crown-choices { margin: 10px 0 12px; }
+.choice { border: 3px solid transparent; border-radius: 12px; min-height: 60px; padding: 6px 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; color: #fff; font-size: .85rem; font-weight: 800; text-shadow: 0 1px 2px rgba(0, 0, 0, .7); }
+.choice svg.castle-icon { width: 22px; height: 22px; }
+.choice[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 2px #fff; }
+.crown-choices button { min-height: 48px; border-radius: 12px; border: 2px solid #d9d1c5; background: #fff; display: flex; align-items: center; justify-content: center; gap: 2px; font-weight: 800; cursor: pointer; }
+.crown-choices button[aria-pressed="true"] { border-color: var(--ink); background: #fff3d6; }
+.crown-choices button:disabled { opacity: .3; cursor: default; }
+.crown-choices .crown { width: 18px; }
+.sheet .btn { width: 100%; }
+
+.toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 90px); transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 12px; font-weight: 700; z-index: 20; max-width: 90vw; text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- 1. Score sheet -->
+<section id="sheet" class="screen">
+  <header class="bar"><h1>Kingdomino</h1><button id="newGame" class="btn quiet" type="button" hidden>New game</button></header>
+  <div class="pad-wrap"><div id="pad" class="pad" role="table" aria-label="Score sheet"></div></div>
+  <p id="verdict" class="note" aria-live="polite"></p>
+  <p id="bonusHint" class="note small" hidden>Tap 10 or 5 to play without that bonus</p>
+  <div class="actions">
+    <button id="snap" class="btn primary" type="button"><span data-icon="camera"></span><span id="snapLabel">Snap a kingdom</span></button>
+  </div>
+</section>
+
+<!-- 2. Camera, with a grid to line the kingdom up in -->
+<section id="camera" class="screen camera" hidden>
+  <video id="video" playsinline muted autoplay></video>
+  <svg id="guide" class="guide" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg>
+  <header class="bar">
+    <button class="icon-btn" type="button" data-close aria-label="Back to the score sheet"><span data-icon="close"></span></button>
+    <span class="grow"></span>
+    <div class="seg" role="group" aria-label="Kingdom size">
+      <button type="button" data-size="5" aria-pressed="false">5×5</button>
+      <button type="button" data-size="7" aria-pressed="false">7×7</button>
+    </div>
+  </header>
+  <div id="cameraBottom" class="camera-bottom">
+    <p id="cameraHint" class="camera-hint">Fit the kingdom in the grid</p>
+    <div class="camera-actions">
+      <label for="photoInput" class="icon-btn big" role="button" tabindex="0" aria-label="Choose a photo instead"><span data-icon="photos"></span></label>
+      <button id="shutter" class="shutter" type="button" aria-label="Take the photo" disabled></button>
+      <span class="spacer"></span>
+    </div>
+  </div>
+</section>
+
+<!-- 3. Line up the grid by hand, only when the app is not sure -->
+<section id="frame" class="screen" hidden>
+  <header class="bar">
+    <button class="icon-btn" type="button" data-close aria-label="Back to the score sheet"><span data-icon="close"></span></button>
+    <h1>Line up the grid</h1>
+    <div class="seg" role="group" aria-label="Kingdom size">
+      <button type="button" data-size="5" aria-pressed="false">5×5</button>
+      <button type="button" data-size="7" aria-pressed="false">7×7</button>
+    </div>
+  </header>
+  <div id="stage" class="stage">
+    <svg id="overlay" class="overlay" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" aria-label="Drag the corners onto the corners of the kingdom"></svg>
+    <canvas id="loupe" class="loupe" width="264" height="264" hidden></canvas>
+  </div>
+  <p class="note small">Drag each corner onto a corner of the kingdom</p>
+  <div class="actions">
+    <button class="btn secondary" type="button" data-retake>Retake</button>
+    <button id="readIt" class="btn primary" type="button">Read it</button>
+  </div>
+</section>
+
+<!-- 4. Check the squares -->
+<section id="check" class="screen" hidden>
+  <header class="bar">
+    <button class="icon-btn" type="button" data-close aria-label="Back to the score sheet"><span data-icon="close"></span></button>
+    <h1>Tap any square that's wrong</h1>
+  </header>
+  <div id="board" class="board"></div>
+  <p class="live"><strong id="liveTotal">0</strong>points</p>
+  <div class="actions">
+    <button class="btn secondary" type="button" data-retake>Retake</button>
+    <button id="addIt" class="btn primary" type="button">Add to sheet</button>
+  </div>
+  <button id="adjustIt" class="btn quiet" type="button" hidden>Grid not lined up? Adjust it</button>
+  <button id="removeIt" class="btn quiet" type="button" hidden>Remove this kingdom</button>
+</section>
+
+<div id="picker" class="picker" hidden>
+  <div class="sheet" role="dialog" aria-label="Fix this square">
+    <div id="terrainChoices" class="choices"></div>
+    <div id="crownChoices" class="crown-choices"></div>
+    <button id="pickerDone" class="btn primary" type="button">Done</button>
+  </div>
+</div>
+
+<div id="busy" class="busy" role="status" hidden><p>Reading the kingdom…</p></div>
+<p id="toast" class="toast" role="status" hidden></p>
+<input id="photoInput" class="visually-hidden" type="file" accept="image/*" tabindex="-1">
+
+<script>
+/* ENGINE START: Kingdomino rules and photo reader, no page code (tests load this part on its own) */
+'use strict';
+/* ==========================================================================
+   KINGDOMINO RULES
+   A kingdom is { size, squares }: squares are read row by row, top-left first.
+   Each square is { t, c }: t is a terrain id, 'castle' or null (empty), c is crowns.
+   ========================================================================== */
+const TERRAINS = {
+  wheat:  { label: 'Wheat',  color: '#d9a93e', maxCrowns: 1 },
+  forest: { label: 'Forest', color: '#3d6e39', maxCrowns: 1 },
+  lake:   { label: 'Lake',   color: '#3f86c9', maxCrowns: 1 },
+  grass:  { label: 'Grass',  color: '#9cc043', maxCrowns: 2 },
+  swamp:  { label: 'Swamp',  color: '#6e5a45', maxCrowns: 2 },
+  mine:   { label: 'Mine',   color: '#2e2a29', maxCrowns: 3 },
+};
+const TERRAIN_IDS = Object.keys(TERRAINS);
+const CASTLE = 'castle';
+const BONUS = { middle: 10, harmony: 5 };
+
+// Each property (connected squares of one terrain) scores squares x crowns.
+function scoreKingdom({ size, squares }, bonuses = { middle: true, harmony: true }) {
+  const byTerrain = Object.fromEntries(TERRAIN_IDS.map(id => [id, 0]));
+  const seen = new Uint8Array(squares.length);
+  let largest = 0, crowns = 0;
+  squares.forEach((square, start) => {
+    if (seen[start] || !TERRAINS[square.t]) return;
+    let area = 0, propertyCrowns = 0;
+    const todo = [start];
+    seen[start] = 1;
+    while (todo.length) {
+      const i = todo.pop(), r = Math.floor(i / size), c = i % size;
+      area += 1;
+      propertyCrowns += squares[i].c;
+      for (const [nr, nc] of [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]]) {
+        const j = nr * size + nc;
+        if (nr < 0 || nr >= size || nc < 0 || nc >= size || seen[j] || squares[j].t !== square.t) continue;
+        seen[j] = 1;
+        todo.push(j);
+      }
+    }
+    byTerrain[square.t] += area * propertyCrowns;
+    largest = Math.max(largest, area);
+    crowns += propertyCrowns;
+  });
+  const middle = bonuses.middle && castleInMiddle({ size, squares }) ? BONUS.middle : 0;
+  const harmony = bonuses.harmony && squares.every(square => square.t) ? BONUS.harmony : 0;
+  const total = TERRAIN_IDS.reduce((sum, id) => sum + byTerrain[id], middle + harmony);
+  return { byTerrain, middle, harmony, total, largest, crowns };
+}
+
+// Middle Kingdom: the castle is on the centre square and the kingdom reaches all four edges.
+function castleInMiddle({ size, squares }) {
+  const centre = (size - 1) / 2;
+  const at = (r, c) => squares[r * size + c].t;
+  const edgeUsed = pick => Array.from({ length: size }, (_, k) => pick(k)).some(Boolean);
+  return at(centre, centre) === CASTLE
+    && edgeUsed(k => at(0, k)) && edgeUsed(k => at(size - 1, k))
+    && edgeUsed(k => at(k, 0)) && edgeUsed(k => at(k, size - 1));
+}
+
+// Highest total wins; ties go to the largest property, then the most crowns.
+function rankPlayers(scores) {
+  let pool = scores.map((_, i) => i);
+  for (const key of ['total', 'largest', 'crowns']) {
+    const best = Math.max(...pool.map(i => scores[i][key]));
+    pool = pool.filter(i => scores[i][key] === best);
+    if (pool.length === 1) return { winners: pool, decidedBy: key };
+  }
+  return { winners: pool, decidedBy: 'shared' };
+}
+
+/* ==========================================================================
+   READING A PHOTO
+   The player drags four corners onto the kingdom. The photo is straightened
+   into a grid, then each square's terrain and crowns are read from colour.
+   Tuned on real Kingdomino tiles photographed on a wooden table.
+   ========================================================================== */
+const READER = {
+  squarePx: 100,     // each square is straightened to this many pixels
+  pad: 0.25,         // also straighten a quarter square outside the kingdom so edge crowns are not cut off
+  inset: 0.15,       // ignore this share of each side of a square when judging terrain (neighbours bleed in)
+  reach: 0.25,       // colour distance beyond which a pixel votes for nothing (roofs, sheep, birds)
+  swampVote: 0.6,    // wood and stone in buildings also look swampy, so swamp votes count less
+  whitePoint: { share: 0.005, level: 245 },   // the brightest 0.5% of each colour is set to this level
+  terrainColours: {  // typical colour of each terrain as [hue degrees, saturation, brightness]
+    wheat: [44, 0.60, 0.78], grass: [72, 0.60, 0.72], forest: [145, 0.40, 0.42],
+    lake: [210, 0.85, 0.86], swamp: [33, 0.30, 0.50], mine: [300, 0.15, 0.20],
+  },
+};
+
+// Returns { size, squares, land, board }. land[i] is square i read as land, used when the
+// player moves the castle off it. board is the straightened photo (with a pad around it).
+function readKingdom(photo, corners, size) {
+  const board = straighten(photo, corners, size);
+  const gains = whiteBalance(board, size);
+  const hsv = toHsv(board);
+  const cells = voteTerrains(hsv, size, sampleTable(photo, corners, gains));
+  const crowns = countCrowns([hsv, toHsv(sharpen(board))], size);
+  const land = cells.map((cell, i) => {
+    const t = terrainOf(cell, crowns[i]);
+    return { t, c: t ? Math.min(crowns[i], TERRAINS[t].maxCrowns) : 0 };
+  });
+  const castle = findCastle(cells, land, size);
+  const squares = land.map((square, i) => (i === castle ? { t: CASTLE, c: 0 } : { ...square }));
+  return { size, squares, land, board };
+}
+
+// Maps (u, v) in the unit square onto the photo quad: corners are top-left, top-right, bottom-right, bottom-left.
+function quadMap(corners) {
+  const { a, b, c, d, e, f, g, h } = quadCoefficients(corners);
+  return (u, v) => {
+    const w = g * u + h * v + 1;
+    return { x: (a * u + b * v + c) / w, y: (d * u + e * v + f) / w };
+  };
+}
+
+function quadCoefficients([p0, p1, p2, p3]) {
+  const dx1 = p1.x - p2.x, dx2 = p3.x - p2.x, dx3 = p0.x - p1.x + p2.x - p3.x;
+  const dy1 = p1.y - p2.y, dy2 = p3.y - p2.y, dy3 = p0.y - p1.y + p2.y - p3.y;
+  const den = dx1 * dy2 - dx2 * dy1;
+  const g = (dx3 * dy2 - dx2 * dy3) / den, h = (dx1 * dy3 - dx3 * dy1) / den;
+  return {
+    a: p1.x - p0.x + g * p1.x, b: p3.x - p0.x + h * p3.x, c: p0.x,
+    d: p1.y - p0.y + g * p1.y, e: p3.y - p0.y + h * p3.y, f: p0.y, g, h,
+  };
+}
+
+// Straightened, padded board image: (size + 2 * pad) squares across, one bilinear sample per pixel
+// (sharper than averaging, which keeps the crowns' thin white outline crisp).
+function straighten(photo, corners, size) {
+  const { squarePx, pad } = READER;
+  const { a, b, c, d, e, f, g, h } = quadCoefficients(corners);
+  const side = Math.round((size + 2 * pad) * squarePx);
+  const out = new Uint8ClampedArray(side * side * 4);
+  const { width, height, data } = photo;
+  const step = 1 / (squarePx * size), start = -pad / size;
+  for (let y = 0; y < side; y++) {
+    const v = start + (y + 0.5) * step;
+    for (let x = 0; x < side; x++) {
+      const u = start + (x + 0.5) * step, w = g * u + h * v + 1;
+      const fx = Math.min(Math.max((a * u + b * v + c) / w - 0.5, 0), width - 1.001);
+      const fy = Math.min(Math.max((d * u + e * v + f) / w - 0.5, 0), height - 1.001);
+      const x0 = fx | 0, y0 = fy | 0, tx = fx - x0, ty = fy - y0;
+      const i = (y0 * width + x0) * 4, j = i + width * 4, o = (y * side + x) * 4;
+      for (let k = 0; k < 3; k++) {
+        out[o + k] = (data[i + k] * (1 - tx) + data[i + 4 + k] * tx) * (1 - ty) + (data[j + k] * (1 - tx) + data[j + 4 + k] * tx) * ty;
+      }
+      out[o + 3] = 255;
+    }
+  }
+  return { width: side, height: side, data: out };
+}
+
+// Evens out the light: the whitest things in a kingdom (crown outlines, sheep, shine) should be white.
+// Scales each colour channel so its brightest pixels inside the kingdom land on white. Returns the gains.
+// region is [x0, x1, y0, y1] in pixels; by default the kingdom inside the straightened board's pad.
+function whiteBalance(board, size, region) {
+  const { squarePx, pad, whitePoint } = READER;
+  const { width, data } = board;
+  const [x0, x1, y0, y1] = region || [pad * squarePx, (pad + size) * squarePx, pad * squarePx, (pad + size) * squarePx].map(Math.round);
+  const gains = [0, 1, 2].map(k => {
+    const histogram = new Uint32Array(256);
+    let count = 0;
+    for (let y = y0; y < y1; y += 2) for (let x = x0; x < x1; x += 2) { histogram[data[(y * width + x) * 4 + k]] += 1; count += 1; }
+    let level = 255, seen = histogram[255];
+    while (level > 64 && seen < count * whitePoint.share) seen += histogram[--level];
+    return whitePoint.level / level;
+  });
+  for (let o = 0; o < data.length; o += 4) for (let k = 0; k < 3; k++) data[o + k] = data[o + k] * gains[k];
+  return gains;
+}
+
+// A sharpened copy (unsharp mask), so a slightly soft photo still shows the crowns' thin white outline.
+function sharpen({ width, height, data }) {
+  const out = new Uint8ClampedArray(data);   // the outermost pixels stay as they are
+  const row = width * 4;
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const o = (y * width + x) * 4;
+      for (let k = o; k < o + 3; k++) {
+        const around = data[k - row - 4] + data[k - row] + data[k - row + 4] + data[k - 4] + data[k]
+          + data[k + 4] + data[k + row - 4] + data[k + row] + data[k + row + 4];
+        out[k] = 2 * data[k] - around / 9;
+      }
+    }
+  }
+  return { width, height, data: out };
+}
+
+// Hue (degrees), saturation and brightness (0..1) for every pixel of an RGBA image.
+function toHsv({ width, height, data }) {
+  const n = width * height, H = new Float32Array(n), S = new Float32Array(n), V = new Float32Array(n);
+  for (let i = 0, o = 0; i < n; i++, o += 4) {
+    const r = data[o] / 255, g = data[o + 1] / 255, b = data[o + 2] / 255;
+    const max = Math.max(r, g, b), d = max - Math.min(r, g, b);
+    let hue = 0;
+    if (d > 0) {
+      hue = max === r ? 60 * (((g - b) / d) % 6) : max === g ? 60 * ((b - r) / d + 2) : 60 * ((r - g) / d + 4);
+      if (hue < 0) hue += 360;
+    }
+    H[i] = hue; S[i] = max ? d / max : 0; V[i] = max;
+  }
+  return { width, height, H, S, V };
+}
+
+// Hue, saturation and brightness as a point in a cone, so colour distance is meaningful.
+function cone(h, s, v) {
+  const a = h * Math.PI / 180;
+  return [s * Math.cos(a), s * Math.sin(a), v];
+}
+
+function distance(p, q) {
+  return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+}
+
+// The table colour, sampled just outside the kingdom, so empty squares can be recognised.
+// Ignored when it looks too much like a terrain (or the kingdom fills the photo).
+function sampleTable(photo, corners, gains) {
+  const map = quadMap(corners), pixels = [], steps = 48;
+  for (let k = 0; k < steps; k++) {
+    const t = (k + 0.5) / steps;
+    for (const d of [0.03, 0.05, 0.07]) {
+      for (const [u, v] of [[t, -d], [1 + d, t], [t, 1 + d], [-d, t]]) {
+        const p = map(u, v);
+        if (p.x < 0 || p.y < 0 || p.x >= photo.width || p.y >= photo.height) continue;
+        const i = (Math.floor(p.y) * photo.width + Math.floor(p.x)) * 4;
+        pixels.push(...[0, 1, 2].map(k => Math.min(255, photo.data[i + k] * gains[k])), 255);
+      }
+    }
+  }
+  const n = pixels.length / 4;
+  if (n < steps * 12 * 0.3) return null;
+  const { H, S, V } = toHsv({ width: n, height: 1, data: pixels });
+  const points = Array.from({ length: n }, (_, i) => cone(H[i], S[i], V[i]));
+  const median = k => points.map(p => p[k]).sort((p, q) => p - q)[n >> 1];
+  const table = [median(0), median(1), median(2)];
+  const looksLikeTerrain = Object.values(READER.terrainColours).some(hsv => distance(cone(...hsv), table) < 0.15);
+  return looksLikeTerrain ? null : table;
+}
+
+// Every pixel in the middle of a square votes for the terrain colour it is closest to.
+function voteTerrains({ width, H, S, V }, size, table) {
+  const { squarePx, pad, inset, reach, swampVote, terrainColours } = READER;
+  const ids = [...Object.keys(terrainColours), ...(table ? ['empty'] : [])];
+  const at = [...Object.values(terrainColours).map(hsv => cone(...hsv)), ...(table ? [table] : [])].flat();
+  const weight = ids.map(id => (id === 'swamp' ? swampVote : 1));
+  const from = Math.round(inset * squarePx), to = Math.round((1 - inset) * squarePx), reach2 = reach * reach;
+  const cells = [];
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const votes = new Float64Array(ids.length);
+      let pixels = 0, deepColour = 0, darkMiddle = 0, middlePixels = 0;
+      for (let y = from; y < to; y++) {
+        let i = Math.round((r + pad) * squarePx + y) * width + Math.round((c + pad) * squarePx + from);
+        for (let x = from; x < to; x++, i++) {
+          const angle = H[i] * Math.PI / 180, px = S[i] * Math.cos(angle), py = S[i] * Math.sin(angle), pz = V[i];
+          let best = -1, bestDistance = reach2;
+          for (let k = 0; k < ids.length; k++) {
+            const dist2 = (px - at[3 * k]) ** 2 + (py - at[3 * k + 1]) ** 2 + (pz - at[3 * k + 2]) ** 2;
+            if (dist2 < bestDistance) { bestDistance = dist2; best = k; }
+          }
+          if (best >= 0) votes[best] += weight[best];
+          if (V[i] < 0.32 && S[i] > 0.5 && H[i] >= 40) deepColour += 1;  // castle clue: dark, saturated, not brown
+          if (x > 0.3 * squarePx && x < 0.7 * squarePx && y > 0.3 * squarePx && y < 0.7 * squarePx) {
+            middlePixels += 1;
+            if (V[i] < 0.3) darkMiddle += 1;                             // castle clue: the inside of the castle is in shadow
+          }
+          pixels += 1;
+        }
+      }
+      cells.push({
+        votes: Object.fromEntries(ids.map((id, k) => [id, votes[k] / pixels])),
+        deepColour: deepColour / pixels, darkMiddle: darkMiddle / middlePixels,
+      });
+    }
+  }
+  return cells;
+}
+
+// The terrain with the most votes, or null when the square is clearly bare table. In a close call,
+// crowns are evidence too: only grass, swamp and mine squares carry two crowns, and only mines three.
+function terrainOf({ votes }, crowns) {
+  const best = TERRAIN_IDS.reduce((a, b) => (votes[a] >= votes[b] ? a : b));
+  const possible = TERRAIN_IDS.filter(id => TERRAINS[id].maxCrowns >= Math.min(crowns, 3) && votes[id] >= 0.5 * votes[best]);
+  const terrain = possible.length ? possible.reduce((a, b) => (votes[a] >= votes[b] ? a : b)) : best;
+  const bare = (votes.empty || 0) >= 0.6 && votes.empty >= 2 * votes[terrain];
+  return bare ? null : terrain;
+}
+
+// The castle is a box in a player colour with a shadowed inside and a weak terrain match.
+// Most players aim for the centre (Middle Kingdom), so it gets a small head start.
+function findCastle(cells, land, size) {
+  const centre = ((size - 1) / 2) * (size + 1);
+  let castle = -1, bestScore = -Infinity;
+  cells.forEach((cell, i) => {
+    if (!land[i].t) return;
+    const terrainMatch = Math.max(...TERRAIN_IDS.map(id => cell.votes[id]));
+    const score = cell.deepColour + 0.3 * cell.darkMiddle - 0.5 * terrainMatch + (i === centre ? 0.1 : 0);
+    if (score > bestScore) { bestScore = score; castle = i; }
+  });
+  return castle;
+}
+
+// Crowns are gold with a red band and a white outline. Several finders look for them, because a
+// photo can blur the outline in two ways: a crown can melt into a wheat field or a red roof
+// (the blob finders miss it), or its white outline can have gaps (the hole finder misses it).
+// Crown gold is brighter than wheat, so one blob finder only uses bright gold. The hole finder also
+// runs on a sharpened copy, for soft photos. Each crown counts on the square under its centre.
+function countCrowns(images, size) {
+  const { squarePx, pad } = READER;
+  const [photo, sharpened] = images.map(hsv => ({ hsv, masks: crownMasks(hsv) }));
+  const found = [
+    ...goldRedBlobs(photo.hsv, photo.masks, photo.masks.gold),
+    ...goldRedBlobs(photo.hsv, photo.masks, photo.masks.brightGold),
+    ...whiteOutlineHoles(photo.hsv, photo.masks),
+    ...whiteOutlineHoles(sharpened.hsv, sharpened.masks),
+  ];
+  const crowns = [];
+  for (const spot of found) {
+    if (!crowns.some(c => Math.hypot(c.x - spot.x, c.y - spot.y) < 0.1 * squarePx)) crowns.push(spot);
+  }
+  const counts = new Array(size * size).fill(0);
+  for (const { x, y } of crowns) {
+    const col = Math.min(Math.max(Math.floor(x / squarePx - pad), 0), size - 1);
+    const row = Math.min(Math.max(Math.floor(y / squarePx - pad), 0), size - 1);
+    counts[row * size + col] += 1;
+  }
+  return counts;
+}
+
+function crownMasks({ width, height, H, S, V }) {
+  const n = width * height, gold = new Uint8Array(n), brightGold = new Uint8Array(n), red = new Uint8Array(n), white = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    gold[i] = H[i] >= 25 && H[i] < 62 && S[i] > 0.30 && V[i] > 0.62 ? 1 : 0;
+    brightGold[i] = gold[i] && V[i] > 0.88 ? 1 : 0;
+    red[i] = (H[i] < 25 || H[i] >= 330) && S[i] > 0.30 && V[i] > 0.40 ? 1 : 0;
+    white[i] = S[i] < 0.40 && V[i] > 0.62 ? 1 : 0;
+  }
+  return { gold, brightGold, red, white };
+}
+
+// Labels connected pixels where inside(i) is true (4-neighbours). Calls visit(blob) for each:
+// blob = { pixels, golds, reds, x0, y0, x1, y1, touchesEdge, label, id }.
+function eachBlob({ width, height }, inside, { gold, red }, visit) {
+  const n = width * height, label = new Int32Array(n), stack = new Int32Array(n);
+  let id = 0;
+  for (let start = 0; start < n; start++) {
+    if (label[start] || !inside(start)) continue;
+    id += 1;
+    const blob = { pixels: 0, golds: 0, reds: 0, x0: width, y0: height, x1: 0, y1: 0, touchesEdge: false, label, id };
+    let top = 0;
+    stack[top++] = start;
+    label[start] = id;
+    while (top) {
+      const i = stack[--top], x = i % width, y = (i - x) / width;
+      blob.pixels += 1; blob.golds += gold[i]; blob.reds += red[i];
+      blob.x0 = Math.min(blob.x0, x); blob.x1 = Math.max(blob.x1, x); blob.y0 = Math.min(blob.y0, y); blob.y1 = Math.max(blob.y1, y);
+      if (x === 0 || y === 0 || x === width - 1 || y === height - 1) { blob.touchesEdge = true; continue; }
+      if (!label[i - 1] && inside(i - 1)) { label[i - 1] = id; stack[top++] = i - 1; }
+      if (!label[i + 1] && inside(i + 1)) { label[i + 1] = id; stack[top++] = i + 1; }
+      if (!label[i - width] && inside(i - width)) { label[i - width] = id; stack[top++] = i - width; }
+      if (!label[i + width] && inside(i + width)) { label[i + width] = id; stack[top++] = i + width; }
+    }
+    visit(blob);
+  }
+}
+
+// Is this blob crown shaped and crown coloured? Sizes are shares of a square.
+function looksLikeCrown({ pixels, golds, reds, x0, y0, x1, y1, touchesEdge }, limits) {
+  const P = READER.squarePx, w = x1 - x0 + 1, h = y1 - y0 + 1;
+  return !touchesEdge
+    && pixels >= limits.minArea * P * P && Math.min(w, h) >= limits.minSide * P && Math.max(w, h) <= limits.maxSide * P
+    && Math.min(w, h) / Math.max(w, h) >= 0.6
+    && golds / pixels >= 0.25 && reds / pixels >= 0.25;
+}
+
+const centreOf = ({ x0, y0, x1, y1 }) => ({ x: (x0 + x1 + 1) / 2, y: (y0 + y1 + 1) / 2 });
+
+// Blob finder: gold and red blobs, shrunk by a pixel so a crown touching a field or roof stands alone,
+// with white just outside them.
+function goldRedBlobs(image, masks, gold) {
+  const { width, height } = image, { red, white } = masks, n = width * height;
+  const body = new Uint8Array(n);
+  const isBody = j => gold[j] || red[j];
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1, i = y * width + 1; x < width - 1; x++, i++) {
+      body[i] = isBody(i) && isBody(i - 1) && isBody(i + 1) && isBody(i - width) && isBody(i + width) ? 1 : 0;
+    }
+  }
+  const found = [];
+  eachBlob(image, i => body[i], masks, blob => {
+    if (looksLikeCrown(blob, { minArea: 0.008, minSide: 0.10, maxSide: 0.26 })
+      && whiteRingShare(blob, white, width, height) >= 0.18) found.push(centreOf(blob));
+  });
+  return found;
+}
+
+// Hole finder: holes in the white outline mask (thickened by two pixels to close gaps).
+function whiteOutlineHoles(image, masks) {
+  const { width, height } = image, { white } = masks, n = width * height;
+  const wall = new Uint8Array(n), across = new Uint8Array(n);
+  for (let y = 0; y < height; y++) {
+    for (let x = 2, i = y * width + 2; x < width - 2; x++, i++) across[i] = white[i - 2] | white[i - 1] | white[i] | white[i + 1] | white[i + 2];
+  }
+  for (let y = 2; y < height - 2; y++) {
+    for (let x = 0, i = y * width; x < width; x++, i++) wall[i] = across[i - 2 * width] | across[i - width] | across[i] | across[i + width] | across[i + 2 * width];
+  }
+  const found = [];
+  eachBlob(image, i => !wall[i], masks, blob => {
+    if (looksLikeCrown(blob, { minArea: 0.006, minSide: 0.09, maxSide: 0.22 })) found.push(centreOf(blob));
+  });
+  return found;
+}
+
+// Share of white pixels 2 to 4 steps outside a blob (a crown's white outline).
+function whiteRingShare({ label, id, x0, y0, x1, y1 }, white, width, height) {
+  const left = Math.max(x0 - 5, 0), top = Math.max(y0 - 5, 0), right = Math.min(x1 + 5, width - 1), bottom = Math.min(y1 + 5, height - 1);
+  const w = right - left + 1, h = bottom - top + 1, dist = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) dist[y * w + x] = label[(top + y) * width + left + x] === id ? 0 : 1e6;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const k = y * w + x;
+    if (x > 0) dist[k] = Math.min(dist[k], dist[k - 1] + 1);
+    if (y > 0) dist[k] = Math.min(dist[k], dist[k - w] + 1);
+  }
+  for (let y = h - 1; y >= 0; y--) for (let x = w - 1; x >= 0; x--) {
+    const k = y * w + x;
+    if (x < w - 1) dist[k] = Math.min(dist[k], dist[k + 1] + 1);
+    if (y < h - 1) dist[k] = Math.min(dist[k], dist[k + w] + 1);
+  }
+  let ring = 0, whites = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const d = dist[y * w + x];
+    if (d >= 2 && d <= 4) { ring += 1; whites += white[(top + y) * width + left + x]; }
+  }
+  return ring ? whites / ring : 0;
+}
+
+/* ==========================================================================
+   FINDING THE KINGDOM IN A PHOTO
+   Finds the four corners so the player rarely has to place them.
+   1. Shrink the photo and sort its pixels into terrains and table.
+   2. Read the board's angle from the tile edges (they run along two square axes).
+   3. Try every grid position and size at that angle; keep the best few.
+   4. Nudge each corner until the squares each hold one terrain and table surrounds the grid.
+   ========================================================================== */
+const FINDER = {
+  workSide: 640,      // finding runs on a copy of the photo this many pixels across
+  tableBand: 0.06,    // the table colour is learnt from this share of the photo around its edge
+  tableReach: 0.12,   // smallest colour distance that still counts as table
+  samples: 10,        // per square side, when scoring a grid closely
+  inset: 0.06,        // ignore this share of each side of a square when scoring a grid
+  clearSide: 0.7,     // a side whose outside strip is at least this share bare counts as clear
+  tablePenalty: 1.5,  // each table-coloured pixel inside a square cancels this many terrain pixels
+  turnLimit: 0.105,   // radians (6 degrees): how far a grid may turn from the angle read off the tile edges
+  goodFit: 0.55,      // grids scoring at least this are trusted without asking the player...
+  clearWin: 0.05,     // ...when they also beat the same grid moved one square by this much
+};
+
+// Returns { corners, fit, sure }: corners in photo pixels (clockwise from top-left), fit from 0 to 1,
+// sure when the grid can be trusted without asking the player.
+// guide is the camera guide square in photo pixels, or null for a photo from the library.
+function findKingdom(photo, size, guide) {
+  const small = shrinkPhoto(photo, FINDER.workSide);
+  const k = small.width / photo.width;
+  const hint = guide && guide.map(p => ({ x: p.x * k, y: p.y * k }));
+  evenExposure(small);
+  const hsv = toHsv(small);
+  const labels = labelPixels(hsv, tableColour(hsv, hint));
+  const board = { labels, width: small.width, height: small.height, size };
+  let best = null;
+  const search = near => {
+    for (const { turned, quad } of roughGrids(board, hsv, near)) {
+      for (const start of withTilts(quad)) {
+        const refined = refineGrid(turned, start);
+        if (!best || refined.fit > best.fit) best = { ...refined, turned };
+      }
+    }
+  };
+  search(hint);
+  if (hint && best.fit < FINDER.goodFit) search(null);   // the kingdom was not lined up with the guide
+  const { turned } = best;
+  best = settleJumps(turned, best);
+  const runnerUp = Math.max(...oneSquareShifts(best.quad, size).map(q => turned.fitQuad(q)));
+  const sure = best.fit >= FINDER.goodFit && best.fit - runnerUp >= FINDER.clearWin;
+  const corners = best.quad.map(p => turned.fromTurned(p.x, p.y)).map(p => ({ x: p.x / k, y: p.y / k }));
+  return { corners, fit: best.fit, margin: best.fit - runnerUp, sure };
+}
+
+// Brightens or darkens the whole photo evenly (no colour shift) so its bright end sits at a set level.
+function evenExposure({ data }) {
+  const histogram = new Uint32Array(256);
+  for (let o = 0; o < data.length; o += 4) histogram[Math.max(data[o], data[o + 1], data[o + 2])] += 1;
+  let level = 255, seen = histogram[255];
+  while (level > 32 && seen < (data.length / 4) * 0.02) seen += histogram[--level];
+  const gain = Math.min(1.6, Math.max(0.8, 235 / level));
+  for (let o = 0; o < data.length; o += 4) { data[o] *= gain; data[o + 1] *= gain; data[o + 2] *= gain; }
+}
+
+// The rough grid plus versions leaning back and forward (the camera tilted towards or away from a side).
+function withTilts(quad) {
+  const L = sideLength(quad), lean = 0.05 * L, starts = [quad];
+  for (const [i, j] of [[0, 1], [1, 2], [2, 3], [3, 0]]) {   // pull one side's ends together
+    const p = quad[i], q = quad[j], ux = (q.x - p.x) / L, uy = (q.y - p.y) / L;
+    starts.push(quad.map((r, n) => (n === i ? { x: r.x + ux * lean, y: r.y + uy * lean } : n === j ? { x: r.x - ux * lean, y: r.y - uy * lean } : r)));
+  }
+  return starts;
+}
+
+// Area-averaged copy whose longest side is at most `side` pixels.
+function shrinkPhoto({ width, height, data }, side) {
+  const scale = Math.min(1, side / Math.max(width, height));
+  const w = Math.max(1, Math.round(width * scale)), h = Math.max(1, Math.round(height * scale));
+  const out = new Uint8ClampedArray(w * h * 4), fx = width / w, fy = height / h;
+  for (let y = 0; y < h; y++) {
+    const y0 = Math.floor(y * fy), y1 = Math.max(y0 + 1, Math.floor((y + 1) * fy));
+    for (let x = 0; x < w; x++) {
+      const x0 = Math.floor(x * fx), x1 = Math.max(x0 + 1, Math.floor((x + 1) * fx));
+      let r = 0, g = 0, b = 0, n = 0;
+      for (let yy = y0; yy < y1; yy++) {
+        for (let i = (yy * width + x0) * 4, end = (yy * width + x1) * 4; i < end; i += 4) { r += data[i]; g += data[i + 1]; b += data[i + 2]; n++; }
+      }
+      const o = (y * w + x) * 4;
+      out[o] = r / n; out[o + 1] = g / n; out[o + 2] = b / n; out[o + 3] = 255;
+    }
+  }
+  return { width: w, height: h, data: out };
+}
+
+// The table's colour: the most common colour just outside the camera guide (right next to the
+// kingdom), or around the photo's edge for a photo from the library. A cone point, with its reach.
+function tableColour({ width, height, H, S, V }, hint) {
+  const band = Math.max(2, Math.round(FINDER.tableBand * Math.min(width, height)));
+  let around = (x, y) => x < band || x >= width - band || y < band || y >= height - band;
+  if (hint) {
+    const cx = hint.reduce((s, p) => s + p.x, 0) / 4, cy = hint.reduce((s, p) => s + p.y, 0) / 4, half = sideLength(hint) / 2;
+    around = (x, y) => { const d = Math.max(Math.abs(x - cx), Math.abs(y - cy)) / half; return d > 1.06 && d < 1.3; };
+  }
+  const xs = [], ys = [], zs = [];
+  for (let y = 0; y < height; y += 2) {
+    for (let x = 0; x < width; x += 2) {
+      if (!around(x, y)) continue;
+      const i = y * width + x, angle = H[i] * Math.PI / 180;
+      xs.push(S[i] * Math.cos(angle)); ys.push(S[i] * Math.sin(angle)); zs.push(V[i]);
+    }
+  }
+  if (xs.length < 50) return hint ? tableColour({ width, height, H, S, V }, null) : { at: [0, 0, 2], reach: 0 };
+  // densest cell of a coarse colour grid, then a few mean-shift steps from there
+  const cells = new Map(), cellOf = i => Math.round(xs[i] * 25 + 25) * 10000 + Math.round(ys[i] * 25 + 25) * 100 + Math.round(zs[i] * 25);
+  let densest = 0, most = 0;
+  for (let i = 0; i < xs.length; i++) {
+    const cell = cellOf(i), count = (cells.get(cell) || 0) + 1;
+    cells.set(cell, count);
+    if (count > most) { most = count; densest = i; }
+  }
+  let mode = [xs[densest], ys[densest], zs[densest]], spread = 0;
+  for (let step = 0; step < 4; step++) {
+    let n = 0, sx = 0, sy = 0, sz = 0, s2 = 0;
+    for (let i = 0; i < xs.length; i++) {
+      const d2 = (xs[i] - mode[0]) ** 2 + (ys[i] - mode[1]) ** 2 + (zs[i] - mode[2]) ** 2;
+      if (d2 < 0.0064) { n++; sx += xs[i]; sy += ys[i]; sz += zs[i]; s2 += d2; }
+    }
+    if (!n) break;
+    mode = [sx / n, sy / n, sz / n];
+    spread = Math.sqrt(s2 / n);
+  }
+  return { at: mode, reach: Math.max(FINDER.tableReach, 3 * spread) };
+}
+
+// Per pixel: 0-5 = terrain (in TERRAIN_IDS order), 6 = table, 7 = neither.
+function labelPixels({ H, S, V }, table) {
+  const reach2 = READER.reach ** 2, table2 = table.reach ** 2;
+  const anchors = TERRAIN_IDS.map(id => cone(...READER.terrainColours[id])).flat();
+  const [tx, ty, tz] = table.at;
+  const labels = new Uint8Array(H.length);
+  for (let i = 0; i < labels.length; i++) {
+    const angle = H[i] * Math.PI / 180, px = S[i] * Math.cos(angle), py = S[i] * Math.sin(angle), pz = V[i];
+    let label = 7, best = reach2;
+    for (let k = 0; k < 6; k++) {
+      const d2 = (px - anchors[3 * k]) ** 2 + (py - anchors[3 * k + 1]) ** 2 + (pz - anchors[3 * k + 2]) ** 2;
+      if (d2 < best) { best = d2; label = k; }
+    }
+    const toTable = (px - tx) ** 2 + (py - ty) ** 2 + (pz - tz) ** 2;
+    if (toTable < table2 && (label === 7 || toTable < best)) label = 6;
+    labels[i] = label;
+  }
+  return labels;
+}
+
+// The board's angle in radians (-45 to 45 degrees): tile edges run along the board's two axes,
+// so edge directions folded into a quarter turn pile up at the board's angle.
+function boardAngle({ width, height, V }, labels, box) {
+  const bins = new Float64Array(90), [x0, x1, y0, y1] = box;
+  const plain = [TERRAIN_IDS.indexOf('wheat'), TERRAIN_IDS.indexOf('swamp')];   // the table's grain can look like these
+  for (let y = Math.max(1, y0); y < Math.min(height - 1, y1); y++) {
+    for (let x = Math.max(1, x0); x < Math.min(width - 1, x1); x++) {
+      const i = y * width + x;
+      if (labels[i] >= 6 || plain.includes(labels[i])) continue;
+      const gx = V[i - width + 1] + 2 * V[i + 1] + V[i + width + 1] - V[i - width - 1] - 2 * V[i - 1] - V[i + width - 1];
+      const gy = V[i + width - 1] + 2 * V[i + width] + V[i + width + 1] - V[i - width - 1] - 2 * V[i - width] - V[i - width + 1];
+      const strength = gx * gx + gy * gy;
+      if (strength < 0.04) continue;
+      const degrees = ((Math.atan2(gy, gx) * 180 / Math.PI) % 90 + 90) % 90;
+      bins[Math.floor(degrees) % 90] += strength;
+    }
+  }
+  let peak = 0, peakValue = -1;
+  for (let k = 0; k < 90; k++) {
+    let sum = 0;
+    for (let d = -2; d <= 2; d++) sum += bins[(k + d + 90) % 90] * (3 - Math.abs(d));
+    if (sum > peakValue) { peakValue = sum; peak = k; }
+  }
+  const degrees = peak + 0.5 >= 45 ? peak + 0.5 - 90 : peak + 0.5;
+  return degrees * Math.PI / 180;
+}
+
+// Rough grids to refine: at the board's angle, grids of every position and size are scored on a
+// turned copy of the labels (counting by lookup tables, so each try is quick), coarsely first and
+// then finely around the best. Near the guide when there is one. Each comes back as
+// { turned, quad }, the quad in the turned copy's pixels.
+function roughGrids(board, hsv, hint) {
+  const { width, height, size } = board;
+  const box = hint
+    ? [Math.min(...hint.map(p => p.x)), Math.max(...hint.map(p => p.x)), Math.min(...hint.map(p => p.y)), Math.max(...hint.map(p => p.y))].map(Math.round)
+    : [0, width, 0, height];
+  const angles = [boardAngle(hsv, board.labels, box)];
+  if (hint) {   // the guide's angle too, when it agrees with the tile edges (the player lined the kingdom up)
+    const guideAngle = Math.atan2(hint[1].y - hint[0].y, hint[1].x - hint[0].x);
+    if (Math.abs(guideAngle - angles[0]) < FINDER.turnLimit && Math.abs(guideAngle - angles[0]) > 0.005) angles.push(guideAngle);
+  }
+  let found = [];
+  for (const angle of angles) {
+    const turned = turnLabels(board, angle);
+    const coarse = [];
+    if (hint) {
+      const L = sideLength(hint), c = turned.toTurned(hint.reduce((s, p) => s + p.x, 0) / 4, hint.reduce((s, p) => s + p.y, 0) / 4);
+      for (let grow = 0.8; grow <= 1.21; grow *= 1.04) {
+        const side = L * grow, step = side / size / 2;
+        for (let i = -3; i <= 3; i++) for (let j = -3; j <= 3; j++) coarse.push({ x: c.x + i * step, y: c.y + j * step, side });
+      }
+    } else {
+      const short = Math.min(width, height);
+      for (let share = 0.45; share <= 1.0; share *= 1.05) {
+        const side = share * short, step = side / size / 2;
+        for (let y = turned.top + 0.4 * side; y <= turned.bottom - 0.4 * side; y += step) {
+          for (let x = turned.left + 0.4 * side; x <= turned.right - 0.4 * side; x += step) coarse.push({ x, y, side });
+        }
+      }
+    }
+    for (const trial of coarse) trial.fit = turned.fit(trial.x - trial.side / 2, trial.y - trial.side / 2, trial.side);
+    for (const best of distinctBest(coarse, size, 4)) {
+      for (let grow = 0.9; grow <= 1.101; grow += 0.025) {
+        const side = best.side * grow, step = side / size / 6;
+        for (let i = -3; i <= 3; i++) {
+          for (let j = -3; j <= 3; j++) {
+            const x = best.x + i * step, y = best.y + j * step;
+            found.push({ x, y, side, angle, turned, fit: turned.fit(x - side / 2, y - side / 2, side) });
+          }
+        }
+      }
+    }
+  }
+  return distinctBest(found, size, 2).map(({ turned, x, y, side }) =>
+    ({ turned, quad: [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, v]) => ({ x: x + u * side / 2, y: y + v * side / 2 })) }));
+}
+
+// The best-scoring trials, skipping any that sit within a square of a better one.
+function distinctBest(trials, size, keep) {
+  const sorted = [...trials].sort((p, q) => q.fit - p.fit), picked = [];
+  for (const trial of sorted) {
+    if (picked.some(p => p.angle === trial.angle && Math.hypot(p.x - trial.x, p.y - trial.y) < p.side / size && Math.abs(p.side - trial.side) < p.side / size)) continue;
+    picked.push(trial);
+    if (picked.length === keep) break;
+  }
+  return picked;
+}
+
+// The labels turned by -angle, so grids at that angle become upright, with running totals per
+// label so the count inside any upright rectangle takes four lookups.
+function turnLabels({ labels, width, height, size }, angle) {
+  const cos = Math.cos(angle), sin = Math.sin(angle), cx = width / 2, cy = height / 2;
+  const w = Math.ceil(Math.abs(width * cos) + Math.abs(height * sin)) + 2, h = Math.ceil(Math.abs(width * sin) + Math.abs(height * cos)) + 2;
+  const tx = w / 2, ty = h / 2;
+  const fromTurned = (X, Y) => ({ x: cx + (X - tx) * cos - (Y - ty) * sin, y: cy + (X - tx) * sin + (Y - ty) * cos });
+  const toTurned = (x, y) => ({ x: tx + (x - cx) * cos + (y - cy) * sin, y: ty - (x - cx) * sin + (y - cy) * cos });
+  // sums[(Y * W + X) * 8 + k]: how many pixels with label k (7 also covers off the photo) lie above and left of (X, Y)
+  const W = w + 1, sums = new Int32Array(W * (h + 1) * 8), row = new Int32Array(8);
+  for (let Y = 0; Y < h; Y++) {
+    row.fill(0);
+    for (let X = 0; X < w; X++) {
+      const sx = cx + (X + 0.5 - tx) * cos - (Y + 0.5 - ty) * sin, sy = cy + (X + 0.5 - tx) * sin + (Y + 0.5 - ty) * cos;
+      const x = Math.floor(sx), y = Math.floor(sy);
+      row[x < 0 || y < 0 || x >= width || y >= height ? 7 : labels[y * width + x]] += 1;
+      const o = ((Y + 1) * W + X + 1) * 8, above = (Y * W + X + 1) * 8;
+      for (let k = 0; k < 8; k++) sums[o + k] = sums[above + k] + row[k];
+    }
+  }
+  const clampX = v => Math.max(0, Math.min(w, Math.round(v))), clampY = v => Math.max(0, Math.min(h, Math.round(v)));
+  // A square's share of its main terrain, less a penalty for plain table colour (real squares have
+  // almost none, while wood grain that looks like swamp comes mixed with it).
+  const squareShare = area => {
+    if (!area) return 0;
+    let most = 0;
+    for (let k = 0; k < 6; k++) if (counts[k] > most) most = counts[k];
+    return Math.max(0, (most - FINDER.tablePenalty * counts[6]) / area);
+  };
+  const counts = new Int32Array(8);
+  const countAll = (x0, y0, x1, y1) => {   // fills counts for the rectangle; returns its pixel area
+    x0 = clampX(x0); x1 = clampX(x1); y0 = clampY(y0); y1 = clampY(y1);
+    if (x1 <= x0 || y1 <= y0) { counts.fill(0); return 0; }
+    const a = (y1 * W + x1) * 8, b = (y0 * W + x1) * 8, c = (y1 * W + x0) * 8, d = (y0 * W + x0) * 8;
+    for (let k = 0; k < 8; k++) counts[k] = sums[a + k] - sums[b + k] - sums[c + k] + sums[d + k];
+    return (x1 - x0) * (y1 - y0);
+  };
+  // How well a grid fits, from 0 to 1: each square should hold a single terrain (the worst square,
+  // usually the castle, is left out), and beyond each of the four sides there should be no tiles.
+  // Each square is counted over the upright rectangle that fits inside it, which is close enough
+  // because the board is nearly upright in the turned copy.
+  const points = new Float64Array((size + 1) * (size + 1) * 2);
+  const fitQuad = quad => {
+    const { a, b, c, d, e, f, g, h: hh } = quadCoefficients(quad), at = (u, v) => {
+      const z = g * u + hh * v + 1;
+      return [(a * u + b * v + c) / z, (d * u + e * v + f) / z];
+    };
+    for (let r = 0; r <= size; r++) {
+      for (let col = 0; col <= size; col++) {
+        const [x, y] = at(col / size, r / size), o = (r * (size + 1) + col) * 2;
+        points[o] = x; points[o + 1] = y;
+      }
+    }
+    const P = (r, col, k) => points[(r * (size + 1) + col) * 2 + k];
+    let total = 0, worst = 1;
+    for (let r = 0; r < size; r++) {
+      for (let col = 0; col < size; col++) {
+        const x0 = Math.max(P(r, col, 0), P(r + 1, col, 0)), x1 = Math.min(P(r, col + 1, 0), P(r + 1, col + 1, 0));
+        const y0 = Math.max(P(r, col, 1), P(r, col + 1, 1)), y1 = Math.min(P(r + 1, col, 1), P(r + 1, col + 1, 1));
+        const ix = FINDER.inset * (x1 - x0), iy = FINDER.inset * (y1 - y0);
+        const share = squareShare(countAll(x0 + ix, y0 + iy, x1 - ix, y1 - iy));
+        total += share;
+        if (share < worst) worst = share;
+      }
+    }
+    // beyond each side, square by square: the strip from 0.15 to 0.6 of a square out
+    let sides = 1;
+    const near = 0.15 / size, far = 0.6 / size;
+    const strip = [(t, d) => at(t, -d), (t, d) => at(1 + d, t), (t, d) => at(t, 1 + d), (t, d) => at(-d, t)];
+    for (let side = 0; side < 4; side++) {
+      let area = 0, tiles = 0;
+      for (let k = 0; k < size; k++) {
+        const ps = [strip[side](k / size, near), strip[side]((k + 1) / size, near), strip[side](k / size, far), strip[side]((k + 1) / size, far)];
+        const xs = ps.map(p => p[0]).sort((a, b) => a - b), ys = ps.map(p => p[1]).sort((a, b) => a - b);
+        const x0 = xs[1], x1 = xs[2], y0 = ys[1], y1 = ys[2];   // the upright rectangle inside the piece
+        if (x1 <= x0 || y1 <= y0) continue;
+        countAll(x0, y0, x1, y1);
+        area += (x1 - x0) * (y1 - y0);   // anything off the photo counts as bare
+        for (let n = 0; n < 6; n++) tiles += counts[n];
+      }
+      sides *= area ? sideClear((area - tiles) / area) : 0.05;
+    }
+    return ((total - worst) / (size * size - 1)) * sides;
+  };
+  // the same score for an upright square grid with its top-left corner at (left, top): no corner maths
+  const fit = (left, top, side) => {
+    const sq = side / size, inset = FINDER.inset * sq;
+    let total = 0, worst = 1;
+    for (let r = 0; r < size; r++) {
+      for (let col = 0; col < size; col++) {
+        const x0 = left + col * sq + inset, y0 = top + r * sq + inset;
+        const share = squareShare(countAll(x0, y0, x0 + sq - 2 * inset, y0 + sq - 2 * inset));
+        total += share;
+        if (share < worst) worst = share;
+      }
+    }
+    const near = 0.15 * sq, far = 0.6 * sq, right = left + side, bottom = top + side;
+    let sides = 1;
+    for (const [x0, y0, x1, y1] of [[left, top - far, right, top - near], [right + near, top, right + far, bottom], [left, bottom + near, right, bottom + far], [left - far, top, left - near, bottom]]) {
+      countAll(x0, y0, x1, y1);
+      const area = (x1 - x0) * (y1 - y0);
+      let tiles = 0;
+      for (let k = 0; k < 6; k++) tiles += counts[k];
+      sides *= sideClear((area - tiles) / area);
+    }
+    return ((total - worst) / (size * size - 1)) * sides;
+  };
+  return { fit, fitQuad, fromTurned, toTurned, size, left: 0, top: 0, right: w, bottom: h };
+}
+
+const sideLength = quad => quad.reduce((sum, p, i) => sum + Math.hypot(quad[(i + 1) % 4].x - p.x, quad[(i + 1) % 4].y - p.y), 0) / 4;
+
+// A side is clear when most of the strip beyond it is not tiles (a few tiles stick out of any kingdom).
+const sideClear = bare => Math.min(1, Math.max(0.05, bare / FINDER.clearSide));
+
+// Nudges corners, sides, tilt, the whole grid, its size and its angle while the fit keeps improving.
+function refineGrid(turned, start, shares = [0.03, 0.016, 0.008, 0.004, 0.002]) {
+  let quad = start.map(p => ({ ...p })), fit = turned.fitQuad(quad);
+  const L = sideLength(quad);
+  for (const share of shares) {
+    const step = share * L;
+    for (let round = 0, improved = true; improved && round < 10; round++) {
+      improved = false;
+      for (const move of gridMoves(step, L)) {
+        const candidate = move(quad);
+        if (!keepsShape(candidate) || !nearlyUpright(candidate)) continue;
+        const candidateFit = turned.fitQuad(candidate);
+        if (candidateFit > fit + 1e-5) { quad = candidate; fit = candidateFit; improved = true; }
+      }
+    }
+  }
+  return { quad, fit };
+}
+
+// The quick scoring needs grids close to upright in the turned copy (the copy is turned to the board).
+function nearlyUpright(quad) {
+  const across = Math.atan2(quad[1].y - quad[0].y + quad[2].y - quad[3].y, quad[1].x - quad[0].x + quad[2].x - quad[3].x);
+  const down = Math.atan2(quad[0].x - quad[3].x + quad[1].x - quad[2].x, quad[3].y - quad[0].y + quad[2].y - quad[1].y);
+  return Math.abs(across) < FINDER.turnLimit && Math.abs(down) < FINDER.turnLimit;
+}
+
+// Clockwise on screen and convex: a grid cannot fold over or flip into a mirror image.
+function keepsShape(quad) {
+  return quad.every((p, i) => {
+    const q = quad[(i + 1) % 4], r = quad[(i + 2) % 4];
+    return (q.x - p.x) * (r.y - q.y) - (q.y - p.y) * (r.x - q.x) > 0;
+  });
+}
+
+function gridMoves(step, L) {
+  const moves = [];
+  for (let k = 0; k < 4; k++) {
+    for (const [dx, dy] of [[step, 0], [-step, 0], [0, step], [0, -step]]) {
+      moves.push(quad => quad.map((p, i) => (i === k ? { x: p.x + dx, y: p.y + dy } : p)));
+    }
+  }
+  for (const [dx, dy] of [[step, 0], [-step, 0], [0, step], [0, -step]]) moves.push(quad => quad.map(p => ({ x: p.x + dx, y: p.y + dy })));
+  for (let side = 0; side < 4; side++) {   // one side's ends closer together or further apart (camera tilt)
+    for (const way of [step, -step]) {
+      moves.push(quad => {
+        const p = quad[side], q = quad[(side + 1) % 4], len = Math.hypot(q.x - p.x, q.y - p.y);
+        const ux = (q.x - p.x) / len * way / 2, uy = (q.y - p.y) / len * way / 2;
+        return quad.map((r, i) => (i === side ? { x: r.x + ux, y: r.y + uy } : i === (side + 1) % 4 ? { x: r.x - ux, y: r.y - uy } : r));
+      });
+    }
+  }
+  for (let side = 0; side < 4; side++) {   // one side in or out
+    for (const way of [step, -step]) {
+      moves.push(quad => {
+        const p = quad[side], q = quad[(side + 1) % 4], len = Math.hypot(q.x - p.x, q.y - p.y);
+        const nx = (q.y - p.y) / len * way, ny = -(q.x - p.x) / len * way;
+        return quad.map((r, i) => (i === side || i === (side + 1) % 4 ? { x: r.x + nx, y: r.y + ny } : r));
+      });
+    }
+  }
+  const around = (quad, fn) => {
+    const cx = quad.reduce((s, p) => s + p.x, 0) / 4, cy = quad.reduce((s, p) => s + p.y, 0) / 4;
+    return quad.map(p => fn(p.x - cx, p.y - cy, cx, cy));
+  };
+  for (const grow of [1 + 2 * step / L, 1 - 2 * step / L]) moves.push(quad => around(quad, (x, y, cx, cy) => ({ x: cx + x * grow, y: cy + y * grow })));
+  for (const turn of [2 * step / L, -2 * step / L]) {
+    const cos = Math.cos(turn), sin = Math.sin(turn);
+    moves.push(quad => around(quad, (x, y, cx, cy) => ({ x: cx + x * cos - y * sin, y: cy + x * sin + y * cos })));
+  }
+  return moves;
+}
+
+
+// Grids moved by one whole square each way: a grid that is one square off scores almost as well locally.
+function oneSquareShifts(quad, size) {
+  const across = { x: (quad[1].x - quad[0].x + quad[2].x - quad[3].x) / (2 * size), y: (quad[1].y - quad[0].y + quad[2].y - quad[3].y) / (2 * size) };
+  const down = { x: (quad[3].x - quad[0].x + quad[2].x - quad[1].x) / (2 * size), y: (quad[3].y - quad[0].y + quad[2].y - quad[1].y) / (2 * size) };
+  return [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([i, j]) => quad.map(p => ({ x: p.x + i * across.x + j * down.x, y: p.y + i * across.y + j * down.y })));
+}
+
+
+function settleJumps(turned, best) {
+  for (let tries = 0; tries < 3; tries++) {
+    const shifted = oneSquareShifts(best.quad, turned.size).map(quad => ({ quad, fit: turned.fitQuad(quad) }));
+    const better = shifted.reduce((a, b) => (b.fit > a.fit ? b : a));
+    if (better.fit <= best.fit) break;
+    best = { ...refineGrid(turned, better.quad, [0.008, 0.004, 0.002]), turned };
+  }
+  return best;
+}
+/* ENGINE END */
+
+/* ==========================================================================
+   APP: score sheet -> camera (grid guide) -> check the squares -> back to the sheet.
+   When the app is not sure where the kingdom is, the player lines up the grid by hand.
+   ========================================================================== */
+const MAX_PHOTO_SIDE = 1600;   // photos are read at this size: sharp enough for crowns, quick on a phone
+const MAX_PLAYERS = 4;
+const GUIDE_SHARE = 0.92;      // the camera guide's side, as a share of the room for it
+const STORE_KEY = 'kingdomino-scorer';
+const $ = selector => document.querySelector(selector);
+
+const state = {
+  players: [],                 // { name, kingdom: { size, squares }, land, photo }
+  bonuses: { middle: true, harmony: true },
+  size: 7,                     // 5 for the standard game, 7 for the Mighty Duel
+};
+let photo = null;              // { canvas, pixels } of the kingdom being read
+let stream = null;             // the live camera, while the camera screen is open
+let corners = [];              // in photo pixels: top-left, top-right, bottom-right, bottom-left
+let editingIndex = null;       // player whose kingdom is being redone, or null for a new one
+let draft = null;              // kingdom being checked: { index, kingdom, land, photo, adjustable }
+let picked = -1;               // square open in the picker
+let drag = null;               // corner being dragged: { index, dx, dy }
+
+/* ---------- Icons ---------- */
+const CROWN = `<svg class="crown" viewBox="-5 -5 74 62" aria-hidden="true">
+  <g fill="#fff" stroke="#fff" stroke-width="9" stroke-linejoin="round"><path d="M8 20 L20 30 L32 12 L44 30 L56 20 L52 40 H12 Z"/><circle cx="7" cy="17" r="5"/><circle cx="32" cy="9" r="5.5"/><circle cx="57" cy="17" r="5"/><rect x="10" y="36" width="44" height="14" rx="3"/></g>
+  <g stroke="#6a1d17" stroke-width="3" stroke-linejoin="round"><path d="M8 20 L20 30 L32 12 L44 30 L56 20 L52 40 H12 Z" fill="#f4b63f"/><circle cx="7" cy="17" r="5" fill="#f4b63f"/><circle cx="32" cy="9" r="5.5" fill="#f4b63f"/><circle cx="57" cy="17" r="5" fill="#f4b63f"/><rect x="10" y="36" width="44" height="14" rx="3" fill="#c8402f"/></g>
+  <g fill="#f0857a"><circle cx="21" cy="43" r="3"/><circle cx="32" cy="43" r="3.6"/><circle cx="43" cy="43" r="3"/></g></svg>`;
+const CASTLE_ICON = '<svg class="castle-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 21V9h3V6h2v3h2V6h4v3h2V6h2v3h3v12h-7v-5a2 2 0 0 0-4 0v5z"/></svg>';
+const ICONS = {
+  camera: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M9 4 7.2 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3.2L15 4H9zm3 4.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/></svg>',
+  close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
+  photos: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2v10.6l3.8-3.8a1 1 0 0 1 1.4 0l2.3 2.3 4.3-4.3a1 1 0 0 1 1.4 0L19 10.6V5H5zm4.5 1.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>',
+};
+function miniGrid(kind) {
+  let squares = '';
+  for (let i = 0; i < 25; i++) {
+    const fill = kind === 'middle' ? (i === 12 ? 'castle' : 'open') : 'full';
+    squares += `<rect class="${fill}" x="${(i % 5) * 5 + 0.5}" y="${Math.floor(i / 5) * 5 + 0.5}" width="4" height="4"/>`;
+  }
+  return `<svg class="mini-grid" viewBox="0 0 25 25" aria-hidden="true"><rect width="25" height="25" fill="#fff" stroke="none"/>${squares}</svg>`;
+}
+const escapeHtml = text => String(text).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+
+/* ---------- Saving between visits (best effort: some previews block storage) ---------- */
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch { /* keep going in memory */ }
+}
+function restore() {
+  try { Object.assign(state, JSON.parse(localStorage.getItem(STORE_KEY)) || {}); } catch { /* start fresh */ }
+}
+
+function show(id) {
+  for (const screen of document.querySelectorAll('.screen')) screen.hidden = screen.id !== id;
+  if (id !== 'camera') stopCamera();
+  window.scrollTo(0, 0);
+}
+
+function busy(on) {
+  $('#busy').hidden = !on;
+}
+
+function flash(message) {
+  const toast = $('#toast');
+  toast.textContent = message;
+  toast.hidden = false;
+  clearTimeout(flash.timer);
+  flash.timer = setTimeout(() => { toast.hidden = true; }, 3500);
+}
+
+// A button that needs a second tap within three seconds, for things that cannot be undone.
+function twoTap(button, armedText, action) {
+  let timer = null;
+  const label = button.textContent;
+  button.addEventListener('click', () => {
+    if (!timer) {
+      button.textContent = armedText;
+      timer = setTimeout(() => { timer = null; button.textContent = label; }, 3000);
+      return;
+    }
+    clearTimeout(timer);
+    timer = null;
+    button.textContent = label;
+    action();
+  });
+}
+
+/* ==========================================================================
+   1. SCORE SHEET
+   ========================================================================== */
+const SHEET_ROWS = [
+  ...TERRAIN_IDS.map(id => ({ key: id, icon: () => `<div class="cell icon art-${id}" role="rowheader" aria-label="${TERRAINS[id].label}">${CROWN}</div>`, value: s => s.byTerrain[id] })),
+  'rope',
+  { key: 'middle', bonus: true, value: s => s.middle, icon: () => bonusIcon('middle', 10, 'Middle Kingdom') },
+  { key: 'harmony', bonus: true, value: s => s.harmony, icon: () => bonusIcon('harmony', 5, 'Harmony') },
+  'rope',
+  { key: 'total', value: s => s.total, icon: () => '<div class="cell icon art-stone total" role="rowheader" aria-label="Total">=</div>' },
+];
+
+function bonusIcon(key, points, name) {
+  const on = state.bonuses[key];
+  return `<button type="button" class="cell icon bonus art-wood${on ? '' : ' off'}" data-bonus="${key}" aria-pressed="${on}" aria-label="${name} bonus, ${points} points, ${on ? 'on' : 'off'}">${points}${miniGrid(key)}</button>`;
+}
+
+function renderSheet() {
+  const scores = state.players.map(player => scoreKingdom(player.kingdom, state.bonuses));
+  const ranking = scores.length > 1 ? rankPlayers(scores) : null;
+  const columns = MAX_PLAYERS;   // like the paper pad
+  const shade = p => `${p % 2 ? 'paper' : 'grey'}${p === columns - 1 ? ' last' : ''}`;
+  let html = '<div class="cell corner"></div>';
+  for (let p = 0; p < columns; p++) {
+    const player = state.players[p];
+    const crowned = ranking && ranking.winners.length === 1 && ranking.winners[0] === p;
+    html += `<div class="cell name ${shade(p)}">${player
+      ? `<input data-player="${p}" value="${escapeHtml(player.name)}" maxlength="14" enterkeyhint="done" aria-label="Name for kingdom ${p + 1}">${crowned ? CROWN : ''}`
+      : ''}</div>`;
+  }
+  html += '<div class="rope"></div>';
+  for (const row of SHEET_ROWS) {
+    if (row === 'rope') { html += '<div class="rope"></div>'; continue; }
+    html += row.icon();
+    for (let p = 0; p < columns; p++) {
+      const score = scores[p];
+      if (!score) { html += `<div class="cell ${shade(p)}"></div>`; continue; }
+      const value = row.value(score);
+      const off = row.bonus && !state.bonuses[row.key];
+      const winner = row.key === 'total' && ranking && ranking.winners.includes(p) && ranking.winners.length < scores.length;
+      html += `<button type="button" class="cell value ${shade(p)}${row.key === 'total' ? ' total' : ''}${value ? '' : ' zero'}${winner ? ' winner' : ''}" data-open="${p}" aria-label="${escapeHtml(state.players[p].name)}: ${value}, tap to check this kingdom">${off ? '' : value || '–'}</button>`;
+    }
+  }
+  $('#pad').innerHTML = html;
+  $('#verdict').textContent = verdict(ranking);
+  $('#snapLabel').textContent = state.players.length ? 'Snap next kingdom' : 'Snap a kingdom';
+  $('#snap').hidden = state.players.length >= MAX_PLAYERS;
+  $('#bonusHint').hidden = !state.players.length;
+  $('#newGame').hidden = !state.players.length;
+}
+
+function verdict(ranking) {
+  if (!ranking) return '';
+  const names = ranking.winners.map(i => state.players[i].name);
+  if (ranking.decidedBy === 'shared') return `${names.join(' and ')} share the win`;
+  const tieBreak = { total: '', largest: ', on the biggest property', crowns: ', on the most crowns' }[ranking.decidedBy];
+  return `${names[0]} wins${tieBreak}`;
+}
+
+$('#pad').addEventListener('click', event => {
+  const bonus = event.target.closest('[data-bonus]');
+  if (bonus) {
+    state.bonuses[bonus.dataset.bonus] = !state.bonuses[bonus.dataset.bonus];
+    save();
+    renderSheet();
+    return;
+  }
+  const cell = event.target.closest('[data-open]');
+  if (cell) openPlayer(Number(cell.dataset.open));
+});
+
+$('#pad').addEventListener('input', event => {
+  const index = event.target.dataset.player;
+  if (index === undefined) return;
+  state.players[index].name = event.target.value;
+  save();
+  const scores = state.players.map(player => scoreKingdom(player.kingdom, state.bonuses));
+  $('#verdict').textContent = verdict(scores.length > 1 ? rankPlayers(scores) : null);
+});
+
+$('#pad').addEventListener('keydown', event => {
+  if (event.key === 'Enter' && event.target.matches('input')) event.target.blur();
+});
+
+twoTap($('#newGame'), 'Tap again to clear', () => {
+  state.players = [];
+  save();
+  renderSheet();
+});
+
+function openPlayer(index) {
+  const player = state.players[index];
+  draft = { index, kingdom: JSON.parse(JSON.stringify(player.kingdom)), land: player.land, photo: player.photo, adjustable: false };
+  openCheck();
+}
+
+function backToSheet() {
+  draft = null;
+  editingIndex = null;
+  closePicker();
+  renderSheet();
+  show('sheet');
+}
+
+/* ==========================================================================
+   2. TAKING THE PHOTO
+   The live camera shows a grid to line the kingdom up in. Without a camera (or permission),
+   the player picks a photo instead. Either way the app then finds the corners itself.
+   ========================================================================== */
+const cameraPossible = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+
+// From the sheet: a new kingdom. From the check or line-up screen: the same kingdom again.
+function startCapture() {
+  editingIndex = draft ? draft.index : null;
+  if (cameraPossible()) openCamera();
+  else $('#photoInput').click();
+}
+
+$('#snap').addEventListener('click', () => {
+  draft = null;
+  startCapture();
+});
+for (const button of document.querySelectorAll('[data-retake]')) button.addEventListener('click', startCapture);
+
+async function openCamera() {
+  show('camera');
+  renderSizes();
+  $('#shutter').disabled = true;
+  $('#cameraHint').textContent = 'Fit the kingdom in the grid';
+  drawGuide();
+  try {
+    const live = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 3840 }, height: { ideal: 2160 } },   // as sharp as the phone allows
+    });
+    if ($('#camera').hidden) { live.getTracks().forEach(track => track.stop()); return; }   // left while it was starting
+    stream = live;
+    const video = $('#video');
+    video.srcObject = stream;
+    await video.play();
+    $('#shutter').disabled = false;
+  } catch {
+    $('#cameraHint').textContent = 'No camera here. Choose a photo instead.';
+  }
+}
+
+function stopCamera() {
+  if (stream) stream.getTracks().forEach(track => track.stop());
+  stream = null;
+  $('#video').srcObject = null;
+}
+
+// The guide square on screen: as big as fits between the top bar and the shutter.
+function guideSquare() {
+  const top = $('#camera .bar').getBoundingClientRect().bottom + 10;
+  const bottom = $('#cameraBottom').getBoundingClientRect().top - 6;
+  const side = GUIDE_SHARE * Math.min(window.innerWidth - 24, bottom - top);
+  return { x: (window.innerWidth - side) / 2, y: top + (bottom - top - side) / 2, side };
+}
+
+function drawGuide() {
+  const { x, y, side } = guideSquare(), n = state.size, W = window.innerWidth, H = window.innerHeight;
+  let lines = '';
+  for (let k = 1; k < n; k++) {
+    const at = (k * side) / n;
+    lines += `M${x + at} ${y}V${y + side}M${x} ${y + at}H${x + side}`;
+  }
+  const arm = side / 9;
+  const corners = [[x, y, 1, 1], [x + side, y, -1, 1], [x + side, y + side, -1, -1], [x, y + side, 1, -1]]
+    .map(([cx, cy, sx, sy]) => `M${cx + sx * arm} ${cy}H${cx}V${cy + sy * arm}`).join('');
+  const guide = $('#guide');
+  guide.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  guide.innerHTML = `<path class="dim" fill-rule="evenodd" d="M0 0H${W}V${H}H0ZM${x} ${y}h${side}v${side}h${-side}Z"/>`
+    + `<path class="lines" d="${lines}"/><rect class="edge" x="${x}" y="${y}" width="${side}" height="${side}"/><path class="corner" d="${corners}"/>`;
+}
+
+// Takes the frame on screen: the guide plus a margin of table around it (enough to find the
+// kingdom's edges), scaled to MAX_PHOTO_SIDE.
+$('#shutter').addEventListener('click', () => {
+  const video = $('#video'), vw = video.videoWidth, vh = video.videoHeight;
+  if (!vw || !vh) return;
+  const box = video.getBoundingClientRect();
+  const scale = Math.max(box.width / vw, box.height / vh);   // the video fills the screen (object-fit: cover)
+  const ox = box.left + (box.width - vw * scale) / 2, oy = box.top + (box.height - vh * scale) / 2;
+  const g = guideSquare(), gx = (g.x - ox) / scale, gy = (g.y - oy) / scale, gs = g.side / scale, margin = 0.2 * gs;
+  const x0 = Math.max(0, gx - margin), y0 = Math.max(0, gy - margin);
+  const x1 = Math.min(vw, gx + gs + margin), y1 = Math.min(vh, gy + gs + margin);
+  const k = Math.min(1, MAX_PHOTO_SIDE / Math.max(x1 - x0, y1 - y0));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round((x1 - x0) * k);
+  canvas.height = Math.round((y1 - y0) * k);
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  context.drawImage(video, x0, y0, x1 - x0, y1 - y0, 0, 0, canvas.width, canvas.height);
+  const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+  const guide = [[gx, gy], [gx + gs, gy], [gx + gs, gy + gs], [gx, gy + gs]].map(([x, y]) => ({ x: (x - x0) * k, y: (y - y0) * k }));
+  readPhoto({ canvas, pixels: { width: canvas.width, height: canvas.height, data } }, guide);
+});
+
+window.addEventListener('resize', () => { if (!$('#camera').hidden) drawGuide(); });
+
+$('#photoInput').addEventListener('change', async event => {
+  const file = event.target.files && event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  try {
+    readPhoto(await loadPhoto(file), null);
+  } catch {
+    flash('That photo would not open. Try another one.');
+  }
+});
+
+// Finds the kingdom, then reads it. Only when the app is not sure does the player line up the grid.
+function readPhoto(newPhoto, guide) {
+  photo = newPhoto;
+  busy(true);
+  setTimeout(() => {   // let "Reading…" show before the work starts
+    let found = null;
+    try {
+      found = findKingdom(photo.pixels, state.size, guide);
+    } catch {
+      found = { corners: guide || centredSquare(photo.pixels.width, photo.pixels.height), sure: false };
+    }
+    corners = found.corners;
+    if (found.sure) {
+      readCorners();
+    } else {
+      busy(false);
+      openFrame();
+    }
+  }, 50);
+}
+
+function centredSquare(width, height) {
+  const side = 0.8 * Math.min(width, height), left = (width - side) / 2, top = (height - side) / 2;
+  return [{ x: left, y: top }, { x: left + side, y: top }, { x: left + side, y: top + side }, { x: left, y: top + side }];
+}
+
+// The photo, scaled down to MAX_PHOTO_SIDE, as a canvas and as pixels for the reader.
+function loadPhoto(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = reject;
+      image.onload = () => {
+        try {
+          const scale = Math.min(1, MAX_PHOTO_SIDE / Math.max(image.naturalWidth, image.naturalHeight));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(image.naturalWidth * scale);
+          canvas.height = Math.round(image.naturalHeight * scale);
+          const context = canvas.getContext('2d', { willReadFrequently: true });
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+          resolve({ canvas, pixels: { width: canvas.width, height: canvas.height, data } });
+        } catch (error) {
+          reject(error);
+        }
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ==========================================================================
+   3. LINE UP THE GRID BY HAND
+   ========================================================================== */
+function openFrame() {
+  show('frame');
+  renderSizes();
+  layoutStage();
+}
+
+function layoutStage() {
+  const stage = $('#stage'), { width, height } = photo.canvas;
+  const room = { width: stage.parentElement.clientWidth - 24, height: Math.max(window.innerHeight - 230, 260) };
+  const scale = Math.min(room.width / width, room.height / height);
+  const shown = { width: Math.round(width * scale), height: Math.round(height * scale) };
+  stage.style.width = `${shown.width}px`;
+  stage.style.height = `${shown.height}px`;
+  let view = stage.querySelector('canvas.photo');
+  if (!view) {
+    view = document.createElement('canvas');
+    view.className = 'photo';
+    stage.prepend(view);
+  }
+  const density = window.devicePixelRatio || 1;
+  view.width = Math.round(shown.width * density);
+  view.height = Math.round(shown.height * density);
+  view.getContext('2d').drawImage(photo.canvas, 0, 0, view.width, view.height);
+  $('#overlay').setAttribute('viewBox', `0 0 ${width} ${height}`);
+  drawOverlay();
+}
+
+const photoPixelsPerScreenPixel = () => photo.canvas.width / $('#stage').clientWidth;
+
+// Corners must make a convex shape, or the grid folds over itself.
+function cornersMakeSense() {
+  const turns = corners.map((p, i) => {
+    const q = corners[(i + 1) % 4], r = corners[(i + 2) % 4];
+    return Math.sign((q.x - p.x) * (r.y - q.y) - (q.y - p.y) * (r.x - q.x));
+  });
+  return turns.every(t => t === turns[0] && t !== 0);
+}
+
+function drawOverlay() {
+  const { width, height } = photo.canvas, n = state.size, good = cornersMakeSense();
+  const map = quadMap(corners);
+  const at = (u, v) => { const p = map(u, v); return `${p.x.toFixed(1)} ${p.y.toFixed(1)}`; };
+  const outline = `M${corners.map(c => `${c.x.toFixed(1)} ${c.y.toFixed(1)}`).join('L')}Z`;
+  let lines = '';
+  if (good) for (let k = 1; k < n; k++) lines += `M${at(k / n, 0)}L${at(k / n, 1)}M${at(0, k / n)}L${at(1, k / n)}`;
+  const radius = (18 * photoPixelsPerScreenPixel()).toFixed(1);
+  $('#overlay').innerHTML = `<path class="dim" fill-rule="evenodd" d="M0 0H${width}V${height}H0Z${outline}"/>`
+    + `<path class="grid" d="${lines}"/><path class="edge${good ? '' : ' bad'}" d="${outline}"/>`
+    + corners.map(c => `<circle class="handle" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${radius}"/>`).join('');
+  $('#readIt').disabled = !good;
+}
+
+function pointerInPhoto(event) {
+  const box = $('#overlay').getBoundingClientRect();
+  return { x: (event.clientX - box.left) * photo.canvas.width / box.width, y: (event.clientY - box.top) * photo.canvas.height / box.height };
+}
+
+$('#overlay').addEventListener('pointerdown', event => {
+  const p = pointerInPhoto(event), reach = 70 * photoPixelsPerScreenPixel();
+  let nearest = -1, nearestDistance = reach;
+  corners.forEach((c, i) => {
+    const d = Math.hypot(c.x - p.x, c.y - p.y);
+    if (d < nearestDistance) { nearestDistance = d; nearest = i; }
+  });
+  if (nearest < 0) return;
+  drag = { index: nearest, dx: corners[nearest].x - p.x, dy: corners[nearest].y - p.y };
+  $('#overlay').setPointerCapture(event.pointerId);
+  event.preventDefault();
+  drawLoupe();
+});
+
+$('#overlay').addEventListener('pointermove', event => {
+  if (!drag) return;
+  const p = pointerInPhoto(event), { width, height } = photo.canvas;
+  corners[drag.index] = { x: Math.min(Math.max(p.x + drag.dx, 0), width), y: Math.min(Math.max(p.y + drag.dy, 0), height) };
+  drawOverlay();
+  drawLoupe();
+});
+
+for (const type of ['pointerup', 'pointercancel']) {
+  $('#overlay').addEventListener(type, () => { drag = null; drawLoupe(); });
+}
+
+// While a corner is dragged, a magnifier shows the photo around it, so it can land exactly on the tile corner.
+function drawLoupe() {
+  const loupe = $('#loupe');
+  if (!drag) { loupe.hidden = true; return; }
+  const c = corners[drag.index], size = loupe.width, view = 0.07 * Math.min(photo.canvas.width, photo.canvas.height);
+  const zoom = size / view, left = c.x - view / 2, top = c.y - view / 2;
+  const context = loupe.getContext('2d');
+  context.fillStyle = '#000';
+  context.fillRect(0, 0, size, size);
+  const sx = Math.max(left, 0), sy = Math.max(top, 0);
+  const sw = Math.min(left + view, photo.canvas.width) - sx, sh = Math.min(top + view, photo.canvas.height) - sy;
+  if (sw > 0 && sh > 0) context.drawImage(photo.canvas, sx, sy, sw, sh, (sx - left) * zoom, (sy - top) * zoom, sw * zoom, sh * zoom);
+  context.strokeStyle = '#fff';
+  context.lineWidth = 3;
+  context.beginPath();
+  for (const j of [(drag.index + 1) % 4, (drag.index + 3) % 4]) {
+    context.moveTo(size / 2, size / 2);
+    context.lineTo(size / 2 + (corners[j].x - c.x) * zoom, size / 2 + (corners[j].y - c.y) * zoom);
+  }
+  context.stroke();
+  context.beginPath();
+  context.arc(size / 2, size / 2, 7, 0, 2 * Math.PI);
+  context.stroke();
+  loupe.className = `loupe ${c.x < photo.canvas.width / 2 ? 'right' : 'left'}`;
+  loupe.hidden = false;
+}
+
+function renderSizes() {
+  for (const button of document.querySelectorAll('[data-size]')) button.setAttribute('aria-pressed', String(Number(button.dataset.size) === state.size));
+}
+
+for (const group of document.querySelectorAll('.seg')) {
+  group.addEventListener('click', event => {
+    const button = event.target.closest('[data-size]');
+    if (!button) return;
+    state.size = Number(button.dataset.size);
+    save();
+    renderSizes();
+    if (!$('#camera').hidden) drawGuide();
+    if (!$('#frame').hidden) drawOverlay();
+  });
+}
+
+$('#readIt').addEventListener('click', () => {
+  busy(true);
+  setTimeout(readCorners, 50);   // let "Reading…" show before the work starts
+});
+
+function readCorners() {
+  const reading = readKingdom(photo.pixels, corners, state.size);
+  draft = {
+    index: editingIndex, kingdom: { size: reading.size, squares: reading.squares }, land: reading.land,
+    photo: boardPicture(reading.board, reading.size), adjustable: true,
+  };
+  busy(false);
+  openCheck();
+}
+
+// The straightened kingdom (without the pad around it) as a small picture to show and keep.
+function boardPicture(board, size) {
+  const { squarePx, pad } = READER;
+  const full = document.createElement('canvas');
+  full.width = board.width;
+  full.height = board.height;
+  full.getContext('2d').putImageData(new ImageData(board.data, board.width, board.height), 0, 0);
+  const picture = document.createElement('canvas');
+  picture.width = picture.height = 72 * size;
+  picture.getContext('2d').drawImage(full, pad * squarePx, pad * squarePx, size * squarePx, size * squarePx, 0, 0, picture.width, picture.height);
+  return picture.toDataURL('image/jpeg', 0.82);
+}
+
+/* ==========================================================================
+   4. CHECK THE SQUARES
+   ========================================================================== */
+function openCheck() {
+  const existing = draft.index !== null && draft.index !== undefined;
+  $('#addIt').textContent = existing ? 'Update sheet' : 'Add to sheet';
+  $('#removeIt').hidden = !existing;
+  $('#adjustIt').hidden = !draft.adjustable;
+  renderBoard();
+  show('check');
+}
+
+function renderBoard() {
+  const { kingdom, photo: picture } = draft;
+  const board = $('#board');
+  board.style.setProperty('--n', kingdom.size);
+  board.style.backgroundImage = `url("${picture}")`;
+  board.innerHTML = kingdom.squares.map((square, i) => {
+    const ring = square.t === CASTLE ? '#ffffff' : square.t ? TERRAINS[square.t].color : 'transparent';
+    const tag = square.t === CASTLE ? `<span class="tag">${CASTLE_ICON}</span>` : square.c ? `<span class="tag">${CROWN.repeat(square.c)}</span>` : '';
+    return `<button type="button" class="sq${square.t ? '' : ' bare'}${i === picked ? ' picked' : ''}" style="--ring: ${ring}" data-square="${i}" aria-label="${describeSquare(square, i, kingdom.size)}">${tag}</button>`;
+  }).join('');
+  $('#liveTotal').textContent = scoreKingdom(kingdom, state.bonuses).total;
+}
+
+function describeSquare(square, i, size) {
+  const where = `Row ${Math.floor(i / size) + 1}, column ${(i % size) + 1}`;
+  if (square.t === CASTLE) return `${where}: castle`;
+  if (!square.t) return `${where}: empty`;
+  return `${where}: ${TERRAINS[square.t].label}, ${square.c} crown${square.c === 1 ? '' : 's'}`;
+}
+
+$('#board').addEventListener('click', event => {
+  const square = event.target.closest('[data-square]');
+  if (!square) return;
+  picked = Number(square.dataset.square);
+  renderBoard();
+  renderPicker();
+  $('#picker').hidden = false;
+});
+
+const CHOICES = [
+  ...TERRAIN_IDS.map(id => ({ t: id, label: TERRAINS[id].label, art: id, icon: '' })),
+  { t: CASTLE, label: 'Castle', art: 'castle', icon: CASTLE_ICON },
+  { t: null, label: 'Empty', art: 'bare', icon: '' },
+];
+$('#terrainChoices').innerHTML = CHOICES.map((choice, k) => `<button type="button" class="choice art-${choice.art}" data-choice="${k}" aria-pressed="false">${choice.icon}${choice.label}</button>`).join('');
+$('#crownChoices').innerHTML = [0, 1, 2, 3].map(n => `<button type="button" data-crowns="${n}" aria-pressed="false" aria-label="${n} crown${n === 1 ? '' : 's'}">${n ? CROWN.repeat(n) : 'None'}</button>`).join('');
+
+function renderPicker() {
+  const square = draft.kingdom.squares[picked];
+  for (const button of document.querySelectorAll('[data-choice]')) button.setAttribute('aria-pressed', String(CHOICES[button.dataset.choice].t === square.t));
+  const most = TERRAINS[square.t] ? TERRAINS[square.t].maxCrowns : 0;
+  for (const button of document.querySelectorAll('[data-crowns]')) {
+    const n = Number(button.dataset.crowns);
+    button.disabled = n > most;
+    button.setAttribute('aria-pressed', String(n === square.c));
+  }
+}
+
+$('#picker').addEventListener('click', event => {
+  if (event.target === event.currentTarget || event.target.closest('#pickerDone')) { closePicker(); return; }
+  const choice = event.target.closest('[data-choice]');
+  const crowns = event.target.closest('[data-crowns]');
+  if (choice) setTerrain(picked, CHOICES[choice.dataset.choice].t);
+  if (crowns && !crowns.disabled) draft.kingdom.squares[picked].c = Number(crowns.dataset.crowns);
+  renderBoard();
+  renderPicker();
+});
+
+// One castle per kingdom: putting it here gives the old castle square back what the photo showed there.
+function setTerrain(i, t) {
+  const squares = draft.kingdom.squares;
+  if (t === CASTLE) {
+    squares.forEach((square, j) => { if (square.t === CASTLE && j !== i) squares[j] = { ...draft.land[j] }; });
+    squares[i] = { t: CASTLE, c: 0 };
+    return;
+  }
+  const crowns = squares[i].t === CASTLE ? draft.land[i].c : squares[i].c;
+  squares[i] = { t, c: Math.min(crowns, TERRAINS[t] ? TERRAINS[t].maxCrowns : 0) };
+}
+
+function closePicker() {
+  picked = -1;
+  $('#picker').hidden = true;
+  if (draft) renderBoard();
+}
+
+$('#addIt').addEventListener('click', () => {
+  const { index, kingdom, land, photo: picture } = draft;
+  if (index === null || index === undefined) state.players.push({ name: `Player ${state.players.length + 1}`, kingdom, land, photo: picture });
+  else state.players[index] = { ...state.players[index], kingdom, land, photo: picture };
+  save();
+  backToSheet();
+});
+
+$('#adjustIt').addEventListener('click', () => {
+  editingIndex = draft.index;
+  openFrame();
+});
+
+twoTap($('#removeIt'), 'Tap again to remove', () => {
+  state.players.splice(draft.index, 1);
+  save();
+  backToSheet();
+});
+
+/* ==========================================================================
+   START
+   ========================================================================== */
+for (const holder of document.querySelectorAll('[data-icon]')) holder.outerHTML = ICONS[holder.dataset.icon];
+for (const button of document.querySelectorAll('[data-close]')) button.addEventListener('click', backToSheet);
+for (const label of document.querySelectorAll('label[for="photoInput"]')) {
+  label.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); $('#photoInput').click(); }
+  });
+}
+window.addEventListener('resize', () => { if (!$('#frame').hidden && photo) layoutStage(); });
+restore();
+renderSheet();
+renderSizes();
+</script>
+</body>
+</html>
