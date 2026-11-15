@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bellezza Bellona: descaling guide</title>
+<style>
+:root{--ink:#2a211c;--muted:#6f625a;--bg:#f5f1eb;--card:#fff;--accent:#7a4a2f;--desc:#f0a04b;--water:#4aa3df;--warn:#c8423b;--ok:#2f8f5b;--line:#e7dfd5}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45}
+.wrap{max-width:1120px;margin:0 auto;padding:28px 20px 60px}
+header{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;justify-content:space-between;border-bottom:3px solid var(--accent);padding-bottom:14px}
+h1{margin:0;font-size:30px;letter-spacing:-.5px}
+h1 small{display:block;font-size:14px;font-weight:500;color:var(--muted);letter-spacing:0;margin-top:4px}
+.tools{display:flex;gap:8px;align-items:center}
+.btn{border:1px solid var(--accent);background:#fff;color:var(--accent);padding:7px 14px;border-radius:20px;font-weight:600;cursor:pointer;font-size:13px}
+.btn:hover{background:var(--accent);color:#fff}
+.progress{height:8px;background:var(--line);border-radius:4px;margin:14px 0 4px;overflow:hidden}
+.progress span{display:block;height:100%;width:0;background:var(--ok);transition:width .4s}
+.ptext{font-size:12px;color:var(--muted)}
+.top{display:grid;grid-template-columns:1.25fr 1fr;gap:18px;margin-top:20px}
+.panel{background:var(--card);border-radius:14px;padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.panel h2{margin:0 0 8px;font-size:18px}
+.panel p{margin:6px 0;font-size:14px}
+#explainer svg{width:100%;height:auto;display:block;margin-top:6px}
+.legend{display:flex;gap:16px;font-size:13px;margin-top:8px;flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+ul.need{list-style:none;padding:0;margin:8px 0 0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ul.need li{background:#faf6f1;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px}
+ul.need b{display:block;font-size:14px}
+.key{display:inline-block;background:#262b31;color:#f4fbff;border-radius:10px;padding:0 8px;font-size:.92em;font-weight:600;white-space:nowrap;box-shadow:0 0 0 2px #bfe0ff88}
+.phase{display:flex;align-items:center;gap:12px;margin:34px 0 14px}
+.phase h2{margin:0;font-size:22px}
+.tag{font-size:12px;font-weight:700;padding:4px 10px;border-radius:12px;color:#fff}
+.tag.d{background:var(--desc)}.tag.w{background:var(--water)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
+.card{background:var(--card);border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;flex-direction:column;border:2px solid transparent;transition:border-color .3s,opacity .3s}
+.card.done{border-color:var(--ok);opacity:.7}
+.viz{background:linear-gradient(#fbf9f6,#efe9e1);padding:6px 8px 0}
+.viz svg{width:100%;height:auto;display:block}
+.body{padding:12px 16px 14px;display:flex;flex-direction:column;flex:1}
+.head{display:flex;gap:10px;align-items:center}
+.num{flex:none;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;display:grid;place-items:center;font-size:14px}
+.card h3{margin:0;font-size:16px}
+.card p{margin:8px 0 0;font-size:14px}
+.note{margin-top:8px;font-size:12.5px;color:var(--muted);background:#faf6f1;border-left:3px solid var(--accent);padding:6px 9px;border-radius:0 6px 6px 0}
+.note.warn{border-color:var(--warn);color:#7a2a25;background:#fdf1f0}
+.check{margin-top:auto;padding-top:10px;align-self:flex-start;font-size:12px;cursor:pointer;color:var(--muted);user-select:none}
+.check input{vertical-align:-2px;margin-right:5px;accent-color:var(--ok)}
+.alert{margin-top:34px;display:grid;grid-template-columns:1fr 1.2fr;gap:18px;background:#fff;border-radius:14px;border:2px solid var(--warn);padding:16px 20px;align-items:center}
+.alert h2{color:var(--warn);margin:0 0 6px;font-size:18px}
+.alert ol{margin:6px 0 0;padding-left:20px;font-size:14px}
+footer{margin-top:28px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+.flow{stroke-dasharray:6 5;animation:dash .5s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-11}}
+.pulse{transform-box:fill-box;transform-origin:center;animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.45);opacity:.35}}
+.heat{animation:rise 2s ease-in-out infinite;opacity:0}
+.heat:nth-of-type(2){animation-delay:.6s}.heat:nth-of-type(3){animation-delay:1.2s}
+@keyframes rise{0%{transform:translateY(6px);opacity:0}40%{opacity:.8}100%{transform:translateY(-6px);opacity:0}}
+.unscrew{transform-box:fill-box;transform-origin:center;animation:unscrew 2.4s ease-in-out infinite}
+@keyframes unscrew{0%,15%{transform:translateY(0) rotate(0)}70%,100%{transform:translateY(16px) rotate(200deg)}}
+.shake{animation:shake .12s linear infinite}
+@keyframes shake{0%{transform:translate(0,0)}25%{transform:translate(1px,-1px)}50%{transform:translate(-1px,1px)}75%{transform:translate(1px,1px)}}
+.blink{animation:blink 1s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+@media (max-width:760px){.top,.alert{grid-template-columns:1fr}ul.need{grid-template-columns:1fr}}
+@media print{
+  body{background:#fff}.tools,.progress,.ptext,.check{display:none}
+  .card,.panel,.alert{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
+  .grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="steel" x1="0" x2="1">
+      <stop offset="0" stop-color="#b6bdc4"/><stop offset=".14" stop-color="#eef1f4"/><stop offset=".32" stop-color="#c8ced4"/>
+      <stop offset=".58" stop-color="#f7f9fa"/><stop offset=".82" stop-color="#c4cad0"/><stop offset="1" stop-color="#a9b0b7"/>
+    </linearGradient>
+    <linearGradient id="steelSide" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#a3abb3"/><stop offset="1" stop-color="#7f878f"/></linearGradient>
+    <linearGradient id="steelTop" x1="0" x2="1"><stop offset="0" stop-color="#d9dee3"/><stop offset=".5" stop-color="#f4f6f8"/><stop offset="1" stop-color="#cdd3d9"/></linearGradient>
+    <linearGradient id="chrome" x1="0" x2="1">
+      <stop offset="0" stop-color="#8b9299"/><stop offset=".3" stop-color="#f3f5f7"/><stop offset=".55" stop-color="#a2a9b0"/><stop offset=".8" stop-color="#e6e9ec"/><stop offset="1" stop-color="#80878e"/>
+    </linearGradient>
+    <linearGradient id="recess" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#1f2328"/><stop offset="1" stop-color="#454b52"/></linearGradient>
+    <linearGradient id="handle" x1="0" x2="1"><stop offset="0" stop-color="#454b52"/><stop offset=".45" stop-color="#22262a"/><stop offset="1" stop-color="#121417"/></linearGradient>
+    <linearGradient id="glass" x1="0" x2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".9"/><stop offset="1" stop-color="#dfe8f0" stop-opacity=".6"/>
+    </linearGradient>
+    <clipPath id="jarIn"><path d="M254.5 146V226Q254.5 233.5 262 233.5H294Q301.5 233.5 301.5 226V146Z"/></clipPath>
+  </defs>
+</svg>
+
+<div class="wrap">
+<header>
+  <div>
+    <h1>Descaling your Bellezza Bellona
+      <small>Preventive descale · dual boiler · button-operated · about 1.5 hours including the soak</small></h1>
+  </div>
+  <div class="tools">
+    <button class="btn" onclick="resetAll()">Reset ticks</button>
+    <button class="btn" onclick="window.print()">Print</button>
+  </div>
+</header>
+<div class="progress"><span id="bar"></span></div>
+<div class="ptext" id="ptext">0 of 11 steps done</div>
+
+<section class="top">
+  <div class="panel">
+    <h2>Why the boilers never “empty”</h2>
+    <p>Hot water comes out of the steam boiler. The custom cup button runs water through the brew boiler to the group. Whatever you take out, the pump tops back up from the glass tank, so you can’t drain them, and you don’t need to. You’re <b>pushing the old water out by pulling new water through</b>. The German manual says the same: press the hot water button and keep drawing until the tank is empty.</p>
+    <div id="explainer"></div>
+    <div class="legend"><span><i style="background:var(--desc)"></i>Descaler solution</span><span><i style="background:var(--water)"></i>Fresh water</span><span><i style="background:#ffd166"></i>Button to press</span></div>
+  </div>
+  <div class="panel">
+    <h2>You’ll need</h2>
+    <ul class="need">
+      <li><b>Descaler</b>Espresso machine descaler, mixed to the bottle’s dilution. No vinegar.</li>
+      <li><b>Blind disc</b>The cleaning cover from the box. It sits in the double basket and blocks it.</li>
+      <li><b>Heat-safe jug</b>1 litre or more, for the hot water outlet on the left.</li>
+      <li><b>Cup and cloth</b>A cup under the group, a cloth for the hot aerator.</li>
+    </ul>
+    <div class="note warn" style="margin-top:12px"><b>Preventive only.</b> If the machine is already heavily scaled (slow flow, grit coming out), have a dealer descale it. Loose scale can block the lines.</div>
+    <div class="note"><b>Golden rule:</b> watch the glass tank. The Bellona has no low-water warning, so keep the tank where you can see it, not behind the machine, and never let it run empty while the pump runs.</div>
+  </div>
+</section>
+
+<div class="phase"><span class="tag d">PHASE 1</span><h2>Descale</h2></div>
+<div class="grid" id="phase1"></div>
+
+<div class="phase"><span class="tag w">PHASE 2</span><h2>Rinse</h2></div>
+<div class="grid" id="phase2"></div>
+
+<section class="alert">
+  <div id="dry" style="max-width:360px;justify-self:center;width:100%"></div>
+  <div>
+    <h2>If the pump runs dry</h2>
+    <p style="margin:0;font-size:14px">The tank is down to the end of the tube, the pump turns loud and rattly, and water sputters or stops.</p>
+    <ol>
+      <li>Let go of the button right away.</li>
+      <li>Refill the tank.</li>
+      <li>Press <b class="key">hot water</b> until the flow runs smooth and steady again.</li>
+    </ol>
+    <p style="font-size:13px;color:var(--muted);margin:8px 0 0">A few seconds won’t hurt it. Running it dry for long will.</p>
+  </div>
+</section>
+
+<footer>Based on the Bellezza manual (pages 26 and 27, English and German), adapted for a button-operated machine. The English text mentions a hot water valve and a dispensing lever that this model doesn’t have. The drawings follow the manual’s parts list and owner reviews: hot water on the left, steam lever and wand on the right, buttons from left to right hot water, single cup, double cup, custom cup, and a glass tank joined to the back by a hose. Animations are sped up. Follow the times written in each step.</footer>
+</div>
+
+<script>
+const COL = { desc: '#f0a04b', water: '#4aa3df' };
+const SURFACE = { desc: '#f8c98e', water: '#a3d3f2' };
+
+// The machine, front on with a little of the top and right side showing. Drawing units are about 4.6 to the cm.
+const X0 = 78, X1 = 210, TOP = 72, BOT = 230, DX = 20, DY = -12, CX = 144, FLOOR = 238;
+const GAUGE = { x: 144, y: 99 }, POWER = { x: 104, y: 99 }, LCD = { x: 166, y: 91 }, BTN_Y = 122;
+const BUTTONS = { hot: 114, single: 134, double: 154, custom: 174 };   // left to right, as on the machine
+const PIVOT = { x: 221, y: 98 };                                       // the steam lever's hinge
+const JAR = { full: 156, empty: 233 };                                 // liquid surface at MAX and at the bottom
+const STOP = .3;                                                       // 2 to 3 cm above the end of the intake tube
+const jarY = f => +(JAR.empty - (JAR.empty - JAR.full) * f).toFixed(1);
+const bar = b => -135 + b * 18;                                        // gauge needle angle, 0 to 15 bar
+
+// Show something for only part of each loop (from and to are fractions of the loop).
+function during(dur, from, to) {
+  if (from <= 0 && to >= 1) return '';
+  const v = [], t = [];
+  if (from > 0) { v.push(0); t.push(0); }
+  v.push(1); t.push(from > 0 ? from : 0);
+  if (to < 1) { v.push(0); t.push(to); }
+  return `<animate attributeName="opacity" calcMode="discrete" values="${v.join(';')}" keyTimes="${t.join(';')}" dur="${dur}s" repeatCount="indefinite"/>`;
+}
+
+function scene(o) {
+  const liquid = o.liquid || 'desc', dur = o.dur || 5, run = o.hold ? [0, .7] : [0, 1];
+  return {
+    o, dur, on: o.power !== false, col: COL[liquid], surface: SURFACE[liquid],
+    level: Array.isArray(o.level) ? o.level : [o.level ?? .8, o.level ?? .8],
+    hotRun: o.alt ? [0, .5] : run, cupRun: o.alt ? [.5, 1] : run,
+    only: (w, svg) => `<g>${during(dur, w[0], w[1])}${svg}</g>`,
+    loop: (attr, values, times) => `<animate attributeName="${attr}" values="${values}" keyTimes="${times}" dur="${dur}s" repeatCount="indefinite"/>`,
+  };
+}
+
+function machine(o = {}) {
+  const k = scene(o);
+  const timer = o.btn === 'custom' || o.alt || o.flowGroup;
+  const display = !k.on ? 'off:0:1:0:1' : o.heat ? `heat:0:${k.dur}:0:.8`
+    : timer ? `timer:${o.secs || 30}:${k.dur}:${k.cupRun[0]}:${o.hold ? .7 : k.cupRun[1] - .05}` : 'temp:0:1:0:1';
+  return `<svg viewBox="0 0 320 250" role="img" aria-label="${o.label || 'The machine'}" data-display="${display}">
+    <line x1="0" y1="${FLOOR}" x2="320" y2="${FLOOR}" stroke="#d8cfc4" stroke-width="2"/>
+    <ellipse cx="150" cy="${FLOOR}" rx="90" ry="4" fill="#000" opacity=".08"/>
+    ${o.pour ? '' : hose()}
+    <g class="${o.shake ? 'shake' : ''}">${body()}${panel(k)}${group(k)}${hotWater(k)}${steam(k)}</g>
+    ${tank(k)}${extras(k)}
+  </svg>`;
+}
+
+// The hose from the tank lid into the back of the machine; the body hides its far end.
+const hose = () => `<path d="M284 132C284 110 258 110 222 118" stroke="#cfd5da" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M284 132C284 111 258 109 222 116.6" stroke="#f4f6f8" stroke-width="1.4" fill="none" opacity=".9"/>`;
+
+function body() {
+  const R = 9, grate = Array.from({ length: 13 }, (_, i) => `M${(106 + i * 6.3).toFixed(1)} 199.6v5`).join('');
+  return `<path d="M${X1} ${TOP}L${X1 + DX} ${TOP + DY}V${BOT + DY}L${X1} ${BOT}Z" fill="url(#steelSide)" stroke="#7d858d"/>
+    <path d="M${X0} ${TOP}L${X1} ${TOP}L${X1 + DX} ${TOP + DY}L${X0 + DX} ${TOP + DY}Z" fill="url(#steelTop)" stroke="#9aa2aa"/>
+    <path d="M${X0 + 5} ${TOP - R}L${X0 + DX + 4} ${TOP + DY - R}H${X1 + DX - 4}L${X1 - 5} ${TOP - R}M${X0 + DX + 4} ${TOP + DY}v${-R}M${X1 + DX - 4} ${TOP + DY}v${-R}" fill="none" stroke="#b3bac1" stroke-width="2"/>
+    <rect x="${X0}" y="${TOP}" width="${X1 - X0}" height="${BOT - TOP}" rx="3" fill="url(#steel)" stroke="#8d949c" stroke-width="1.2"/>
+    <path d="M${X0 + 5} ${TOP}v${-R}H${X1 - 5}v${R}" fill="none" stroke="#d3d8dd" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="100" y="134" width="88" height="72" rx="4" fill="url(#recess)"/>
+    <rect x="100" y="134" width="88" height="5" fill="#000" opacity=".25"/>
+    <rect x="102" y="198" width="84" height="8" rx="1.5" fill="#79808a"/><path d="${grate}" stroke="#596069"/>
+    <line x1="${X0 + 2}" y1="207.5" x2="${X1 - 2}" y2="207.5" stroke="#8d949c"/>
+    <rect x="83" y="210" width="122" height="17" rx="2" fill="url(#steel)" stroke="#a0a7ae"/>
+    <rect x="86" y="${BOT}" width="14" height="${FLOOR - BOT}" rx="2" fill="#3a3f45"/><rect x="188" y="${BOT}" width="14" height="${FLOOR - BOT}" rx="2" fill="#3a3f45"/>`;
+}
+
+// Power and SET, the pump pressure gauge, the display and the four backlit buttons.
+function panel(k) {
+  const { o, on } = k, g = GAUGE, lit = on ? '#eef8ff' : '#79818a', ring = on ? '#bfe0ff' : '#59616a';
+  const at = (b, r) => [g.x + r * Math.sin(bar(b) * Math.PI / 180), g.y - r * Math.cos(bar(b) * Math.PI / 180)].map(n => n.toFixed(1));
+  const ticks = [0, 3, 6, 9, 12, 15].map(b => `M${at(b, 10.4).join(' ')}L${at(b, 13.4).join(' ')}`).join('');
+  const press = (x, y, w) => k.only(w, `<circle class="pulse" cx="${x}" cy="${y}" r="8.6" fill="none" stroke="#ffd166" stroke-width="2.4"/>`);
+  let s = `<circle cx="${POWER.x}" cy="${POWER.y}" r="6.5" fill="#262b31" stroke="${ring}" stroke-width="1.2"/>
+    <path d="M${POWER.x - 2.4} ${POWER.y - 2.2}a3.4 3.4 0 1 0 4.8 0M${POWER.x} ${POWER.y - 4}v4" stroke="${lit}" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    <circle cx="${g.x}" cy="${g.y}" r="17" fill="url(#chrome)" stroke="#7d858d" stroke-width=".8"/>
+    <circle cx="${g.x}" cy="${g.y}" r="14.4" fill="#fbfbf8"/>
+    <path d="M${at(8, 12).join(' ')}A12 12 0 0 1 ${at(11, 12).join(' ')}" stroke="#58b368" stroke-width="2.4" fill="none"/>
+    <path d="${ticks}" stroke="#3b4148" stroke-width=".9"/>
+    <text x="${g.x}" y="${g.y + 9.5}" font-size="3.8" text-anchor="middle" fill="#6f767d">bar</text>
+    <line x1="${g.x}" y1="${g.y + 2}" x2="${g.x}" y2="${g.y - 11.6}" stroke="#c8423b" stroke-width="1.3" stroke-linecap="round" transform="rotate(${bar(0)} ${g.x} ${g.y})">${needle(k)}</line>
+    <circle cx="${g.x}" cy="${g.y}" r="1.8" fill="#2a2f36"/>
+    <rect x="${LCD.x}" y="${LCD.y}" width="32" height="16" rx="2.5" fill="${on ? '#0c1a25' : '#20262c'}" stroke="#59616a" stroke-width=".8"/>
+    <text class="lcd" x="${LCD.x + 16}" y="${LCD.y + 11.4}" font-size="8.5" font-weight="700" font-family="ui-monospace,Consolas,Menlo,monospace" text-anchor="middle" fill="#8fe6ff">${on ? '93°' : ''}</text>`;
+  for (const [name, x] of Object.entries(BUTTONS)) {   // the backlight flashes while it heats up
+    s += `<circle cx="${x}" cy="${BTN_Y}" r="6.6" fill="#262b31" stroke="#59616a" stroke-width="1.2"/>${icon(name, x, BTN_Y, '#79818a')}
+      <g class="${o.flash ? 'blink' : ''}" opacity="${on ? 1 : 0}"><circle cx="${x}" cy="${BTN_Y}" r="6.6" fill="none" stroke="${ring}" stroke-width="1.2"/>${icon(name, x, BTN_Y, lit)}</g>`;
+  }
+  if (o.btn === 'power') s += press(POWER.x, POWER.y, [0, 1]);
+  if (o.btn === 'hot' || o.alt) s += press(BUTTONS.hot, BTN_Y, k.hotRun);
+  if (o.btn === 'custom' || o.alt) s += press(BUTTONS.custom, BTN_Y, k.cupRun);
+  return s;
+}
+
+function icon(name, x, y, c) {
+  const cup = (cx, w) => `<path d="M${cx - w / 2} ${y - 1.7}h${w}l${-w * .12} ${w * .75}h${-w * .76}Z" fill="${c}"/>`;
+  if (name === 'hot') return `<path d="M${x} ${y - 3.7}c2 2.4 2.7 3.4 2.7 4.6a2.7 2.7 0 0 1-5.4 0c0-1.2.7-2.2 2.7-4.6Z" fill="${c}"/>`;
+  if (name === 'single') return cup(x, 4.6);
+  if (name === 'double') return cup(x - 2.3, 3.6) + cup(x + 2.3, 3.6);
+  return `<text x="${x}" y="${y + 2.2}" font-size="6.2" font-weight="800" text-anchor="middle" fill="${c}">M</text>`;
+}
+
+// Pump pressure: full against the blind disc, low with the group open.
+function needle(k) {
+  const { o } = k, at = b => `${bar(b)} ${GAUGE.x} ${GAUGE.y}`;
+  const swing = (bars, times) => `<animateTransform attributeName="transform" type="rotate" values="${bars.map(at).join(';')}" keyTimes="${times}" dur="${k.dur}s" repeatCount="indefinite"/>`;
+  if (o.blind && o.hold) return swing([0, 9, 9.4, 0, 0], '0;.1;.68;.74;1');
+  if (o.alt) return swing([0, 0, 2, 2, 0], '0;.5;.56;.95;1');
+  if (o.flowGroup) return swing([0, 2, 2, 0], '0;.06;.94;1');
+  return '';
+}
+
+// The group sits inside the body. With no portafilter, water showers straight out of it.
+function group(k) {
+  const { o, col } = k;
+  let s = `<rect x="121" y="134" width="46" height="11" rx="2" fill="url(#chrome)"/><rect x="124.5" y="145" width="39" height="3.4" rx="1.5" fill="#3b4148"/>`;
+  if (!o.blind && (o.flowGroup || o.alt)) {
+    s += k.only(k.cupRun, [137, 144, 151].map(x => `<line class="flow" x1="${x}" y1="149" x2="${x + (x - CX) * .2}" y2="${o.cup ? 190 : 198}" stroke="${col}" stroke-width="2" stroke-linecap="round"/>`).join(''));
+  }
+  if (o.blind) {
+    s += `<path d="M126 148.6h36l-2.6 9.4q-.8 2.4-3.6 2.4h-23.6q-2.8 0-3.6-2.4Z" fill="url(#chrome)" stroke="#6f767d" stroke-width=".8"/>
+      <rect x="139" y="160.4" width="10" height="3.6" rx="1" fill="#9aa1a8"/><path d="M141 164v2.6M147 164v2.6" stroke="#9aa1a8" stroke-width="1.6"/>
+      <path d="M160.5 151.5L197 158.2a3 3 0 0 1-1.1 5.9L159.5 157.6Z" fill="url(#handle)"/>
+      <circle cx="198.6" cy="161.4" r="2.8" fill="url(#chrome)" stroke="#7d858d" stroke-width=".6"/>
+      <text x="144" y="156.4" font-size="5" font-weight="800" text-anchor="middle" fill="#ffd166">BLIND</text>`;
+  }
+  if (o.blind && o.hold) {   // let go and the pressure dumps from under the group into the tray
+    s += k.only([.7, 1], [0, .18, .36].map(d => `<circle cx="127" cy="150" r="1.8" fill="${col}"><animate attributeName="cy" values="150;198" dur=".55s" begin="${d}s" repeatCount="indefinite"/></circle>`).join('')
+      + `<text x="103" y="176" font-size="6" fill="#f6dcc3">into tray</text>`);
+  }
+  if (o.cup) {
+    s += `<path d="M132 176h24l-2.6 22h-18.8Z" fill="#fff" stroke="#9aa3ad"/><path d="M155.5 180q5 0 4.4 5t-5.2 4.4" stroke="#9aa3ad" stroke-width="1.6" fill="none"/>`;
+    if (o.flowGroup || o.alt) s += `<path d="M134.3 189h19.4l-1 8.4h-17.4Z" fill="${col}" opacity=".7"/>`;
+  }
+  return s;
+}
+
+// Hot water comes out on the left, through the aerator at the end of the pipe.
+function hotWater(k) {
+  const { o, col } = k, fills = o.alt ? .5 : .85;
+  let s = `<path d="M${X0 + 2} 140C68 141 59 147 59 159V178" stroke="#a7afb7" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M${X0 + 2} 139C68 140 58.2 146 57.8 158V177" stroke="#eef1f4" stroke-width="1.3" fill="none" opacity=".8"/>
+    <g class="${o.aeratorOff ? 'unscrew' : ''}"><rect x="55" y="177" width="8" height="9" rx="1.6" fill="#7d858d"/><path d="M55 180h8M55 183h8" stroke="#aab2ba"/></g>`;
+  if (o.aeratorOff) s += `<text x="70" y="182" font-size="12" fill="#7a4a2f" text-anchor="middle">↻</text>`;
+  if (o.jug) {
+    s += `<rect x="42.4" width="29.2" y="${o.sputter ? 228 : 232}" height="${o.sputter ? 8 : 4}" fill="${col}" opacity=".55">${o.sputter ? '' : k.loop('y', `232;214;214`, `0;${fills};1`) + k.loop('height', '4;22;22', `0;${fills};1`)}</rect>
+      <path d="M40 205h34l-2 33h-30Z" fill="url(#glass)" stroke="#9aa9b8" stroke-width="1.2"/><path d="M40.6 211q-8 1-7.4 9t8.2 7" stroke="#9aa9b8" stroke-width="2" fill="none"/>`;
+  }
+  if (o.flowHW || o.alt) s += k.only(k.hotRun, `<line class="flow" x1="59" y1="187" x2="59" y2="226" stroke="${col}" stroke-width="3" stroke-linecap="round"/>`);
+  if (o.sputter) {
+    s += [0, .45, .8].map((d, i) => `<circle cx="${58 + i}" cy="188" r="2" fill="${col}"><animate attributeName="cy" values="188;226" dur=".7s" begin="${d}s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0;0" keyTimes="0;.4;.41;1" dur="1.4s" begin="${d}s" repeatCount="indefinite"/></circle>`).join('');
+  }
+  return s;
+}
+
+// Steam is on the right: the wand, and the big lever you pull down.
+function steam(k) {
+  const { o } = k, p = PIVOT, at = deg => `${deg} ${p.x} ${p.y}`;
+  const pull = o.steam ? `<animateTransform attributeName="transform" type="rotate" values="${[0, 0, 62, 62, 0, 0].map(at).join(';')}" keyTimes="0;.12;.2;.55;.63;1" dur="${k.dur}s" repeatCount="indefinite"/>` : '';
+  let s = `<path d="M${X1 + 9} 141C232 142 240 149 240 161V188" stroke="#a7afb7" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M${X1 + 9} 140C232 141 239.2 148 238.8 160V187" stroke="#eef1f4" stroke-width="1.3" fill="none" opacity=".8"/>
+    <rect x="237" y="187" width="6" height="7" rx="1.5" fill="#7d858d"/>
+    <g>${pull}
+      <line x1="${p.x}" y1="${p.y}" x2="228" y2="63" stroke="#c3c9cf" stroke-width="4.4" stroke-linecap="round"/>
+      <line x1="228.2" y1="62" x2="235" y2="31" stroke="#1d2125" stroke-width="7.6" stroke-linecap="round"/>
+      <line x1="227.4" y1="60" x2="233.2" y2="33" stroke="#5b636b" stroke-width="1.4" stroke-linecap="round"/>
+      <circle cx="235.6" cy="28.4" r="3.6" fill="url(#chrome)" stroke="#7d858d" stroke-width=".6"/>
+    </g>
+    <circle cx="${p.x}" cy="${p.y}" r="6" fill="url(#chrome)" stroke="#7d858d" stroke-width=".8"/>`;
+  if (o.steam) {
+    s += k.only([.2, .58], [0, .25, .5].map(d => `<circle cx="241" cy="198" r="2.5" fill="#fff" stroke="#9fb0bd" stroke-width=".8">
+      <animate attributeName="r" values="2.5;9" dur="1s" begin="${d}s" repeatCount="indefinite"/><animate attributeName="cy" values="198;216" dur="1s" begin="${d}s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="1;0" dur="1s" begin="${d}s" repeatCount="indefinite"/></circle>`).join(''));
+  }
+  return s;
+}
+
+// The round glass tank: lid, intake tube with its filter, and how far the level drops.
+function tank(k) {
+  const { o, col, surface } = k, [a, b] = k.level, ya = jarY(a), yb = jarY(b), moving = a !== b, t = '0;.8;1';
+  let s = `<path d="M252 146V226Q252 236 262 236H294Q304 236 304 226V146Z" fill="url(#glass)"/><ellipse cx="278" cy="146" rx="26" ry="4.5" fill="#eef3f7" stroke="#a9bccd"/>`;
+  if (o.pour) s += `<line class="flow" x1="287" y1="112" x2="286" y2="232" stroke="${col}" stroke-width="2.6"/>`;
+  if (Math.max(a, b) > 0) {
+    s += `<g clip-path="url(#jarIn)">
+      <rect x="250" width="56" y="${ya}" height="${(236 - ya).toFixed(1)}" fill="${col}" opacity=".85">${moving ? k.loop('y', `${ya};${yb};${yb}`, t) + k.loop('height', `${(236 - ya).toFixed(1)};${(236 - yb).toFixed(1)};${(236 - yb).toFixed(1)}`, t) : ''}</rect>
+      <ellipse cx="278" rx="25" ry="3.4" cy="${ya}" fill="${surface}">${moving ? k.loop('cy', `${ya};${yb};${yb}`, t) : ''}</ellipse></g>`;
+  }
+  if (!o.pour) s += `<line x1="284" y1="140" x2="284" y2="222" stroke="#c3c9cf" stroke-width="3"/><rect x="280" y="221" width="8" height="8" rx="2" fill="#5c636b"/>`;
+  s += `<path d="M252 146V226Q252 236 262 236H294Q304 236 304 226V146" fill="none" stroke="#9fb3c8" stroke-width="2"/>
+    <path d="M258 153V224" stroke="#fff" stroke-width="2" opacity=".75" stroke-linecap="round"/>
+    <path d="M252 ${JAR.full}h6" stroke="#8fa4b8"/><text x="260" y="${JAR.full + 1.8}" font-size="5" fill="#7d8fa1">MAX</text>`;
+  if (!o.pour) s += `<rect x="249" y="137" width="58" height="8" rx="3" fill="url(#chrome)" stroke="#7d858d" stroke-width=".8"/><rect x="280.5" y="131" width="7" height="7" rx="1.5" fill="#9aa1a8"/>`;
+  if (o.stopLine) {
+    const y = jarY(STOP);
+    s += `<line x1="248" y1="${y}" x2="308" y2="${y}" stroke="#c8423b" stroke-width="1.6" stroke-dasharray="3 2"/><text x="232.5" y="${y + 2.3}" font-size="6.5" font-weight="800" fill="#c8423b" class="blink">STOP</text>`;
+  }
+  if (o.pour) {
+    s += `<g transform="translate(294 100) rotate(-130)"><rect x="-7" y="-2" width="14" height="23" rx="3" fill="${col}" stroke="#7a6a5a" stroke-width=".8"/>
+      <rect x="-7" y="5" width="14" height="7" fill="#fff" opacity=".55"/><rect x="-3" y="-9" width="6" height="8" fill="${col}" stroke="#7a6a5a" stroke-width=".8"/></g>`;
+  }
+  if (o.empty) {
+    s += `<text x="278" y="127" font-size="9" font-weight="800" fill="#c8423b" text-anchor="middle" class="blink">EMPTY!</text>`
+      + [0, .4, .8].map((d, i) => `<circle cx="${282 + i * 2}" cy="221" r="1.6" fill="none" stroke="#7d8fa1"><animate attributeName="cy" values="221;200" dur="1.2s" begin="${d}s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0" dur="1.2s" begin="${d}s" repeatCount="indefinite"/></circle>`).join('');
+  }
+  return s;
+}
+
+// Heat, the timer, repeats, the soak clock and the final tick.
+function extras(k) {
+  const { o } = k;
+  let s = '';
+  if (o.heat) s += [112, 144, 176].map(x => `<path class="heat" d="M${x} 52q3-4 0-8t0-8" stroke="#e07a3f" stroke-width="1.6" fill="none"/>`).join('');
+  if (o.timer) {
+    s += `<circle cx="294" cy="34" r="14" fill="#fff" stroke="#e7dfd5" stroke-width="3"/>
+      <circle cx="294" cy="34" r="14" fill="none" stroke="#7a4a2f" stroke-width="3" stroke-dasharray="88" transform="rotate(-90 294 34)">${k.loop('stroke-dashoffset', '0;88;88', `0;${k.cupRun[1] < 1 ? k.cupRun[1] : .95};1`)}</circle>
+      <text x="294" y="37.5" font-size="9" font-weight="700" text-anchor="middle" fill="#2a211c">${o.timer}</text>`;
+  }
+  if (o.repeat) s += `<rect x="276" y="56" width="36" height="16" rx="8" fill="#7a4a2f"/><text x="294" y="67.5" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">${o.repeat}</text>`;
+  if (o.wait) {
+    s += `<circle cx="294" cy="34" r="15" fill="#fff" stroke="#7a4a2f" stroke-width="2.5"/>
+      <line x1="294" y1="34" x2="294" y2="23" stroke="#7a4a2f" stroke-width="2" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 294 34" to="360 294 34" dur="3s" repeatCount="indefinite"/></line>
+      <circle cx="294" cy="34" r="1.6" fill="#7a4a2f"/><text x="294" y="62" font-size="9" font-weight="700" text-anchor="middle" fill="#7a4a2f">30 min</text>`;
+  }
+  if (o.check) s += `<circle cx="294" cy="34" r="14" fill="#2f8f5b"/><path d="M286.5 34l5 5 9-10" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+  return s;
+}
+
+const steps1 = [
+ { t: 'Mix, fill and heat up', p: 'Empty the glass tank, fill it with the descaler solution and put the lid back on. Turn the machine on and let it heat up: the buttons flash while it warms and stop once it’s ready.', n: 'Empty the drip tray now. It fills quickly during descaling.', m: { pour: true, level: [.08, 1], heat: true, flash: true, dur: 4 } },
+ { t: 'Load the steam boiler', p: 'Put the jug under the hot water outlet on the left. Press <b class="key">hot water</b> (far left button) in bursts until about <b>⅓ of the tank</b> is used.', n: 'This is the manual’s “empty the kettle” step. Hot water comes from the steam boiler, so you’re swapping its water for descaler, not draining it. The flow can slow while the boiler refills and reheats.', m: { btn: 'hot', flowHW: true, jug: true, level: [1, .67] } },
+ { t: 'Descale the expansion valve', p: 'Put the <b>blind disc</b> in the double portafilter and lock it in. Hold <b class="key">custom cup</b> (far right button) for about <b>20 seconds</b>, then let go. The gauge climbs to about 9 bar while you hold. When you let go, solution drains from under the group into the tray. Do this <b>3 times</b>.', m: { blind: true, btn: 'custom', hold: true, secs: 20, timer: '20s', repeat: '×3', level: [.67, .6] } },
+ { t: 'Load the brew boiler', p: 'Take the portafilter off. Put a cup under the group and run <b class="key">custom cup</b> for about <b>30 seconds</b>.', m: { btn: 'custom', flowGroup: true, cup: true, secs: 30, timer: '30s', level: [.6, .5] } },
+ { t: 'Soak', p: 'Turn the machine <b>off</b> and leave the descaler to work for about <b>30 minutes</b>.', m: { power: false, wait: true, level: .5, btn: 'power' } },
+ { t: 'Flush the rest, stop before empty', p: 'Turn the machine on. Run the rest of the solution through, switching between <b class="key">hot water</b> and <b class="key">custom cup</b>. <b>Stop when about 2 to 3 cm is left</b> above the end of the tube in the tank.', n: 'There’s no low-water warning. If the tank empties, the pump runs dry. Stop at the red line.', warn: true, m: { alt: true, jug: true, cup: true, secs: 30, level: [.5, STOP], stopLine: true, dur: 6 } },
+];
+const steps2 = [
+ { t: 'Remove the aerator', p: 'Unscrew the nozzle (aerator) from the end of the hot water pipe on the left and rinse off any scale.', n: 'Hot. Use a cloth or gloves.', warn: true, m: { aeratorOff: true, power: false, level: STOP } },
+ { t: 'Wash and refill with fresh water', p: 'Lift the lid and tube out, wash the glass tank well and fill it with fresh water. Put the lid back on and turn the machine on.', m: { pour: true, liquid: 'water', level: [.08, 1], dur: 4 } },
+ { t: 'Rinse cycle × 5', p: 'Draw <b class="key">hot water</b> until about half the tank is used, then run <b class="key">custom cup</b> for about <b>1 minute</b>. Refill the tank. Do this cycle at least <b>5 times</b>.', m: { alt: true, jug: true, cup: true, liquid: 'water', secs: 60, level: [1, .4], repeat: '×5', dur: 6 } },
+ { t: 'Rinse the expansion valve', p: 'Put the blind disc back in. Hold <b class="key">custom cup</b> for about 20 seconds, then let go. This flushes descaler out of the valve.', m: { blind: true, btn: 'custom', hold: true, secs: 20, timer: '20s', liquid: 'water', level: [.8, .75] } },
+ { t: 'Final check', p: 'Water from both outlets should be <b>clear, with no taste or smell</b>. If it isn’t, do another rinse cycle. Pull the steam lever down for a few seconds to clear the wand, refit the aerator, and throw away your first shot.', m: { flowGroup: true, cup: true, steam: true, liquid: 'water', secs: 25, level: .8, check: true, dur: 6 } },
+];
+
+let n = 0;
+function card(s) {
+  n++;
+  return `<article class="card" data-i="${n}">
+    <div class="viz">${machine({ ...s.m, label: s.t })}</div>
+    <div class="body">
+      <div class="head"><div class="num">${n}</div><h3>${s.t}</h3></div>
+      <p>${s.p}</p>
+      ${s.n ? `<div class="note${s.warn ? ' warn' : ''}">${s.n}</div>` : ''}
+      <label class="check"><input type="checkbox" data-i="${n}"> Done</label>
+    </div></article>`;
+}
+document.getElementById('phase1').innerHTML = steps1.map(card).join('');
+document.getElementById('phase2').innerHTML = steps2.map(card).join('');
+document.getElementById('dry').innerHTML = machine({ level: 0, btn: 'hot', shake: true, sputter: true, jug: true, empty: true, label: 'The pump running dry' });
+
+// Both boilers stay full: what comes out is replaced from the tank, so old water turns into new.
+const swap = attr => `<animate attributeName="${attr}" values="#f0a04b;#f0a04b;#9ea48f;#4aa3df;#4aa3df" keyTimes="0;.15;.5;.85;1" dur="7s" repeatCount="indefinite"/>`;
+document.getElementById('explainer').innerHTML = `
+<svg viewBox="0 0 440 178" role="img" aria-label="How water moves through the Bellona">
+  <rect x="14" y="64" width="56" height="88" rx="10" fill="url(#glass)" stroke="#9fb3c8" stroke-width="2"/>
+  <rect x="17" y="80" width="50" height="69" rx="7" fill="#4aa3df" opacity=".85"/>
+  <line x1="50" y1="58" x2="50" y2="142" stroke="#c3c9cf" stroke-width="3"/><rect x="46" y="141" width="8" height="7" rx="2" fill="#5c636b"/>
+  <rect x="11" y="57" width="62" height="8" rx="3" fill="url(#chrome)" stroke="#7d858d" stroke-width=".8"/>
+  <text x="42" y="170" font-size="11" text-anchor="middle" fill="#6f625a">Glass tank</text>
+  <path class="flow" d="M50 57C50 30 104 28 104 54V66" stroke="#4aa3df" stroke-width="4" fill="none"/>
+  <rect x="82" y="66" width="44" height="26" rx="6" fill="#3a3f46"/><text x="104" y="83" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">PUMP</text>
+  <path class="flow" d="M126 79H148V43H170M148 79V125H170" stroke="#4aa3df" stroke-width="4" fill="none"/>
+  <rect x="170" y="14" width="146" height="58" rx="24" fill="#f0a04b" stroke="#8d949c" stroke-width="2">${swap('fill')}</rect>
+  <text x="243" y="38" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">Steam boiler, 1 L</text>
+  <text x="243" y="55" font-size="10" fill="#fff" text-anchor="middle">old → new</text>
+  <rect x="170" y="102" width="128" height="46" rx="18" fill="#f0a04b" stroke="#8d949c" stroke-width="2">${swap('fill')}</rect>
+  <text x="234" y="121" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">Brew boiler, 0.5 L</text>
+  <text x="234" y="137" font-size="10" fill="#fff" text-anchor="middle">old → new</text>
+  <path class="flow" d="M316 43H366V54" stroke="#f0a04b" stroke-width="4" fill="none">${swap('stroke')}</path>
+  <rect x="352" y="69" width="28" height="15" fill="#f0a04b" opacity=".6">${swap('fill')}</rect>
+  <path d="M352 58h28v26h-28Z" fill="url(#glass)" stroke="#9aa9b8"/>
+  <text x="366" y="100" font-size="11" text-anchor="middle" fill="#6f625a">Hot water</text>
+  <path class="flow" d="M298 125H408V138" stroke="#f0a04b" stroke-width="4" fill="none">${swap('stroke')}</path>
+  <path d="M396 142h24l-2.6 20h-18.8Z" fill="#fff" stroke="#9aa3ad"/>
+  <path d="M398.2 152h19.6l-1.2 9h-17.2Z" fill="#f0a04b" opacity=".7">${swap('fill')}</path>
+  <text x="408" y="176" font-size="11" text-anchor="middle" fill="#6f625a">Group</text>
+</svg>`;
+
+// The display shows the brew temperature, warms up in step 1, and runs the shot timer while the pump does,
+// each on its own drawing's clock.
+const displays = [...document.querySelectorAll('svg[data-display]')];
+function showDisplays() {
+  for (const svg of displays) {
+    const [mode, count, dur, from, to] = svg.dataset.display.split(':'), text = svg.querySelector('.lcd');
+    const p = (svg.getCurrentTime() % +dur) / +dur;
+    text.textContent = mode === 'off' ? '' : mode === 'temp' ? '93°'
+      : mode === 'heat' ? `${Math.round(30 + 63 * Math.min(1, p / +to))}°`
+      : p < +from ? '93°' : String(Math.min(+count, Math.floor((p - from) / (to - from) * count)));
+  }
+}
+if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  document.querySelectorAll('svg[viewBox]').forEach(svg => { svg.pauseAnimations(); svg.setCurrentTime(2); });
+  showDisplays();
+} else setInterval(showDisplays, 200);
+
+const KEY = 'bellona-descale';
+const saved = JSON.parse(localStorage.getItem(KEY) || '[]');
+function update() {
+  const boxes = [...document.querySelectorAll('.check input')];
+  const done = boxes.filter(b => b.checked);
+  boxes.forEach(b => b.closest('.card').classList.toggle('done', b.checked));
+  document.getElementById('bar').style.width = (done.length / boxes.length * 100) + '%';
+  document.getElementById('ptext').textContent = `${done.length} of ${boxes.length} steps done`;
+  localStorage.setItem(KEY, JSON.stringify(done.map(b => b.dataset.i)));
+}
+document.querySelectorAll('.check input').forEach(b => { b.checked = saved.includes(b.dataset.i); b.addEventListener('change', update); });
+function resetAll() { document.querySelectorAll('.check input').forEach(b => b.checked = false); update(); }
+update();
+</script>
+</body>
+</html>
