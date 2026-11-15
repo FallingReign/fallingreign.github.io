@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bellezza Bellona: descaling guide</title>
+<title>Bellona descaling guide</title>
 <style>
 :root{--ink:#2a211c;--muted:#6f625a;--bg:#f5f1eb;--card:#fff;--accent:#7a4a2f;--desc:#f0a04b;--water:#4aa3df;--warn:#c8423b;--ok:#2f8f5b;--line:#e7dfd5}
 *{box-sizing:border-box}
@@ -119,7 +119,7 @@ footer{margin-top:28px;font-size:12px;color:var(--muted);border-top:1px solid va
     <h2>You’ll need</h2>
     <ul class="need">
       <li><b>Descaler</b>Espresso machine descaler, mixed to the bottle’s dilution. No vinegar.</li>
-      <li><b>Blind disc</b>The cleaning cover from the box. It sits in the double basket and blocks it.</li>
+      <li><b>Blind filter</b>The cleaning cover from the box: it goes in the double basket and blocks it. A solid blind basket does the same job.</li>
       <li><b>Heat-safe jug</b>1 litre or more, for the hot water outlet on the left.</li>
       <li><b>Cup and cloth</b>A cup under the group, a cloth for the hot aerator.</li>
     </ul>
@@ -254,7 +254,7 @@ function icon(name, x, y, c) {
   return `<text x="${x}" y="${y + 2.2}" font-size="6.2" font-weight="800" text-anchor="middle" fill="${c}">M</text>`;
 }
 
-// Pump pressure: full against the blind disc, low with the group open.
+// Pump pressure: full against the blind filter, low with the group open.
 function needle(k) {
   const { o } = k, at = b => `${bar(b)} ${GAUGE.x} ${GAUGE.y}`;
   const swing = (bars, times) => `<animateTransform attributeName="transform" type="rotate" values="${bars.map(at).join(';')}" keyTimes="${times}" dur="${k.dur}s" repeatCount="indefinite"/>`;
@@ -382,7 +382,7 @@ function extras(k) {
 const steps1 = [
  { t: 'Mix, fill and heat up', p: 'Empty the glass tank, fill it with the descaler solution and put the lid back on. Turn the machine on and let it heat up: the buttons flash while it warms and stop once it’s ready.', n: 'Empty the drip tray now. It fills quickly during descaling.', m: { pour: true, level: [.08, 1], heat: true, flash: true, dur: 4 } },
  { t: 'Load the steam boiler', p: 'Put the jug under the hot water outlet on the left. Press <b class="key">hot water</b> (far left button) in bursts until about <b>⅓ of the tank</b> is used.', n: 'This is the manual’s “empty the kettle” step. Hot water comes from the steam boiler, so you’re swapping its water for descaler, not draining it. The flow can slow while the boiler refills and reheats.', m: { btn: 'hot', flowHW: true, jug: true, level: [1, .67] } },
- { t: 'Descale the expansion valve', p: 'Put the <b>blind disc</b> in the double portafilter and lock it in. Hold <b class="key">custom cup</b> (far right button) for about <b>20 seconds</b>, then let go. The gauge climbs to about 9 bar while you hold. When you let go, solution drains from under the group into the tray. Do this <b>3 times</b>.', m: { blind: true, btn: 'custom', hold: true, secs: 20, timer: '20s', repeat: '×3', level: [.67, .6] } },
+ { t: 'Descale the expansion valve', p: 'Fit the <b>blind filter</b> in the double portafilter and lock it in. Hold <b class="key">custom cup</b> (far right button) for about <b>20 seconds</b>, then let go. The gauge climbs to about 9 bar while you hold. When you let go, solution drains from under the group into the tray. Do this <b>3 times</b>.', m: { blind: true, btn: 'custom', hold: true, secs: 20, timer: '20s', repeat: '×3', level: [.67, .6] } },
  { t: 'Load the brew boiler', p: 'Take the portafilter off. Put a cup under the group and run <b class="key">custom cup</b> for about <b>30 seconds</b>.', m: { btn: 'custom', flowGroup: true, cup: true, secs: 30, timer: '30s', level: [.6, .5] } },
  { t: 'Soak', p: 'Turn the machine <b>off</b> and leave the descaler to work for about <b>30 minutes</b>.', m: { power: false, wait: true, level: .5, btn: 'power' } },
  { t: 'Flush the rest, stop before empty', p: 'Turn the machine on. Run the rest of the solution through, switching between <b class="key">hot water</b> and <b class="key">custom cup</b>. <b>Stop when about 2 to 3 cm is left</b> above the end of the tube in the tank.', n: 'There’s no low-water warning. If the tank empties, the pump runs dry. Stop at the red line.', warn: true, m: { alt: true, jug: true, cup: true, secs: 30, level: [.5, STOP], stopLine: true, dur: 6 } },
@@ -391,7 +391,7 @@ const steps2 = [
  { t: 'Remove the aerator', p: 'Unscrew the nozzle (aerator) from the end of the hot water pipe on the left and rinse off any scale.', n: 'Hot. Use a cloth or gloves.', warn: true, m: { aeratorOff: true, power: false, level: STOP } },
  { t: 'Wash and refill with fresh water', p: 'Lift the lid and tube out, wash the glass tank well and fill it with fresh water. Put the lid back on and turn the machine on.', m: { pour: true, liquid: 'water', level: [.08, 1], dur: 4 } },
  { t: 'Rinse cycle × 5', p: 'Draw <b class="key">hot water</b> until about half the tank is used, then run <b class="key">custom cup</b> for about <b>1 minute</b>. Refill the tank. Do this cycle at least <b>5 times</b>.', m: { alt: true, jug: true, cup: true, liquid: 'water', secs: 60, level: [1, .4], repeat: '×5', dur: 6 } },
- { t: 'Rinse the expansion valve', p: 'Put the blind disc back in. Hold <b class="key">custom cup</b> for about 20 seconds, then let go. This flushes descaler out of the valve.', m: { blind: true, btn: 'custom', hold: true, secs: 20, timer: '20s', liquid: 'water', level: [.8, .75] } },
+ { t: 'Rinse the expansion valve', p: 'Fit the blind filter again. Hold <b class="key">custom cup</b> for about 20 seconds, then let go. This flushes descaler out of the valve.', m: { blind: true, btn: 'custom', hold: true, secs: 20, timer: '20s', liquid: 'water', level: [.8, .75] } },
  { t: 'Final check', p: 'Water from both outlets should be <b>clear, with no taste or smell</b>. If it isn’t, do another rinse cycle. Pull the steam lever down for a few seconds to clear the wand, refit the aerator, and throw away your first shot.', m: { flowGroup: true, cup: true, steam: true, liquid: 'water', secs: 25, level: .8, check: true, dur: 6 } },
 ];
 
